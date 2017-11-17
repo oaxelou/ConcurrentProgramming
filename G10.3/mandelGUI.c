@@ -13,9 +13,10 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-volatile int *res;
+volatile int *res, *draw_array;
 volatile mandel_Pars * slices;
 volatile int maxIterations, threadycast, nofslices;
+volatile int nofjustfin, main_draw_w;
 
 volatile my_bsem *sem_args;
 volatile my_bsem *sem_assign;
@@ -25,11 +26,14 @@ pthread_mutex_t mtx;
 pthread_cond_t cond_args;
 pthread_cond_t cond_assign;
 pthread_cond_t cond_m_assign;
+pthread_cond_t cond_draw;
 
 #define WinW 300
 #define WinH 300
 #define ZoomStepFactor 0.5
 #define ZoomIterationFactor 2
+
+#define JUST_FINISHED 1
 
 static Display *dsp = NULL;
 static unsigned long curC;
@@ -165,7 +169,13 @@ void *worker (void *arg){
     mandel_Calc((mandel_Pars*)slices+my_no,maxIterations,(int*)res + my_no*slices[my_no].imSteps*slices[my_no].reSteps);
 
     //notify main
-    my_bsem_down((my_bsem*)&(sem_draw[my_no]), __LINE__);
+    pthread_mutex_lock(&mtx);
+    draw_array[my_no] = JUST_FINISHED;
+    nofjustfin++;
+    if(main_draw_w){
+      pthread_cond_signal(&cond_draw);
+    }
+    pthread_mutex_unlock(&mtx);
 
   }
   return NULL;
@@ -218,6 +228,7 @@ int main(int argc, char *argv[]) {
   slices = (volatile mandel_Pars *) malloc(sizeof(mandel_Pars)*nofslices);
   res = (volatile int *) malloc(sizeof(int)*pars.reSteps*pars.imSteps);
   pth_array = (pthread_t*) malloc(sizeof(pthread_t)*nofslices);
+  draw_array = (volatile int *) malloc(sizeof(int)*nofslices);
 
   //allocating volatile sems
   sem_args = (volatile my_bsem *)malloc(sizeof(my_bsem)*nofslices);
@@ -231,10 +242,12 @@ int main(int argc, char *argv[]) {
 
   //initialising condition
   threadycast = 0;
+  main_draw_w = 0;
   pthread_condattr_init(&cond_attr);
   pthread_cond_init(&cond_args, NULL);
   pthread_cond_init(&cond_assign, NULL);
   pthread_cond_init(&cond_m_assign, NULL);
+  pthread_cond_init(&cond_draw, NULL);
 
   // initialising semaphores
   for (i=0; i<nofslices; i++){
@@ -272,7 +285,7 @@ int main(int argc, char *argv[]) {
 
     pthread_mutex_lock(&mtx);
     printf("main: going to wait\n");
-    if(threadycast < nofslices){
+    if(threadycast < nofslices){  //ERWTHSH: MPOROUME NA XRISIMOPOIHSOYME BROADCAST
       pthread_cond_wait(&cond_m_assign, &mtx);
     }
     printf("main: ready to notify workers\n");
@@ -290,15 +303,25 @@ int main(int argc, char *argv[]) {
     workersDone = 0;
     while (1){ // while not all workers done
 
+      pthread_mutex_lock(&mtx);
       //for: up(sem_draw), breaks when it finds a worker which has downed its sem_draw
+      if (nofjustfin == 0){
+        main_draw_w = 1;
+        pthread_cond_wait(&cond_draw, &mtx);
+      }
+
       for(i = 0; i < nofslices; i++){
         printf("i = %d\n",i);
-        if(my_bsem_up((my_bsem*)&(sem_draw[i]), __LINE__) == 0){
+        if(draw_array[i] == JUST_FINISHED){
+          draw_array[i] = !JUST_FINISHED;
+          nofjustfin--;
           printf("Main: printing %d\n", i);
           workersDone++;
           break;
         }
       }
+
+      pthread_mutex_unlock(&mtx);
 
       //when for-break occurs (a thread has just finished), it draws the result
       if(i < nofslices){
