@@ -5,10 +5,10 @@
  * Every worker thread computes a slice of the final image and the main thread draws the result
  *
  * The synchronization and the communication betweeen main thread and workers
- * are dessigned with our binary semaphores from my_sema.h library.
+ * are dessigned with mutexes and conditions.
  */
-#include "my_sema.h"
 
+#include "mtx_cond.h"
 #include "mandelCore.h"
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -16,11 +16,7 @@
 volatile int *res, *draw_array;
 volatile mandel_Pars * slices;
 volatile int maxIterations, threadycast, nofslices;
-volatile int nofjustfin, main_draw_w;
-
-volatile my_bsem *sem_args;
-volatile my_bsem *sem_assign;
-volatile my_bsem *sem_draw;
+volatile int nofjustfin, main_assign_w, main_draw_w;
 
 pthread_mutex_t mtx;
 pthread_cond_t cond_args;
@@ -28,12 +24,12 @@ pthread_cond_t cond_assign;
 pthread_cond_t cond_m_assign;
 pthread_cond_t cond_draw;
 
+#define JUST_FINISHED 1
+
 #define WinW 300
 #define WinH 300
 #define ZoomStepFactor 0.5
 #define ZoomIterationFactor 2
-
-#define JUST_FINISHED 1
 
 static Display *dsp = NULL;
 static unsigned long curC;
@@ -147,22 +143,24 @@ void *worker (void *arg){
   int mtx_res;
 
   //be sure to take the right args
-  pthread_mutex_lock(&mtx);
   pthread_cond_signal(&cond_args);
-  pthread_mutex_unlock(&mtx);
 
   while(1){
     // wait for main to assign job
     pthread_mutex_lock(&mtx);
     threadycast++;
+    printf("%d: threadycast = %d\n", my_no, threadycast);
     if(threadycast == nofslices){
-      printf("notifying main\n");
-      pthread_cond_signal(&cond_m_assign);
+      printf("%d: notifying main: everyone is here and waiting for the job\n", my_no);
+      if(main_assign_w){
+        pthread_cond_signal(&cond_m_assign);
+        main_assign_w = 0;
+      }
     }
-    printf("worker %d: going to block\n", my_no);
+    // printf("worker %d: going to block\n", my_no);
 
-    pthread_cond_wait(&cond_assign, &mtx);
-    printf("worker %d: starting working\n", my_no);
+    pthread_cond_wait(&cond_assign, &mtx); // in CS to make sure that main doesn't "signal" before it "wait"s ?
+    // printf("worker %d: starting working\n", my_no);
     pthread_mutex_unlock(&mtx);
 
     // perform the Mandelbrot computation
@@ -174,6 +172,7 @@ void *worker (void *arg){
     nofjustfin++;
     if(main_draw_w){
       pthread_cond_signal(&cond_draw);
+      main_draw_w = 0;
     }
     pthread_mutex_unlock(&mtx);
 
@@ -224,48 +223,35 @@ int main(int argc, char *argv[]) {
   /* allocate slice parameter and result arrays */
 
   //allocating volatile arrays: slices, res
-  //and the pthread_t array for pthread_create
+  //the pthread_t array for pthread_create
+  //and int draw_array for drawing synchronization
   slices = (volatile mandel_Pars *) malloc(sizeof(mandel_Pars)*nofslices);
   res = (volatile int *) malloc(sizeof(int)*pars.reSteps*pars.imSteps);
   pth_array = (pthread_t*) malloc(sizeof(pthread_t)*nofslices);
   draw_array = (volatile int *) malloc(sizeof(int)*nofslices);
 
-  //allocating volatile sems
-  sem_args = (volatile my_bsem *)malloc(sizeof(my_bsem)*nofslices);
-  sem_draw = (volatile my_bsem *)malloc(sizeof(my_bsem)*nofslices);
-  sem_assign = (volatile my_bsem *)malloc(sizeof(my_bsem)*nofslices);
-
   //initialising mutex
-  pthread_mutexattr_init(&mtx_attr);
-  pthread_mutexattr_settype(&mtx_attr, MUTEX_TYPE);
-  pthread_mutex_init(&mtx, &mtx_attr);
+  mtx_init(&mtx, __LINE__);
 
-  //initialising condition
+  //initialising conditions
   threadycast = 0;
   main_draw_w = 0;
-  pthread_condattr_init(&cond_attr);
-  pthread_cond_init(&cond_args, NULL);
-  pthread_cond_init(&cond_assign, NULL);
-  pthread_cond_init(&cond_m_assign, NULL);
-  pthread_cond_init(&cond_draw, NULL);
-
-  // initialising semaphores
-  for (i=0; i<nofslices; i++){
-      my_bsem_init((my_bsem*)&(sem_args[i]), 0, __LINE__);
-      my_bsem_init((my_bsem*)&(sem_assign[i]), 0, __LINE__);
-      my_bsem_init((my_bsem*)&(sem_draw[i]), 1, __LINE__);
-  }
+  main_assign_w = 0;
+  cond_init(&cond_args, __LINE__);
+  cond_init(&cond_assign, __LINE__);
+  cond_init(&cond_m_assign, __LINE__);
+  cond_init(&cond_draw, __LINE__);
 
   // creating threads
   for (i=0; i<nofslices; i++){
-      pthread_mutex_lock(&mtx);
+      mtx_lock(&mtx, __LINE__); // to lock xreiazetai na einai edw ?
       if (pthread_create(&pth_array[i], NULL, worker, (void*)&i))
           printf("error at pthread_create no: %d\n", i);
 
       // waits for the thread to take its argument
       // before continuing with the next one
-      pthread_cond_wait(&cond_args, &mtx);
-      pthread_mutex_unlock(&mtx);
+      cond_wait(&cond_args, &mtx, __LINE__);
+      mtx_unlock(&mtx, __LINE__);
   }
 
 // ************************* END OF INITIALISATIONS *****************************
@@ -283,45 +269,49 @@ int main(int argc, char *argv[]) {
     // create N jobs and assign them to workers
     mandel_Slice(&pars, nofslices, (mandel_Pars *) slices);
 
-    pthread_mutex_lock(&mtx);
-    printf("main: going to wait\n");
+    mtx_lock(&mtx, __LINE__);
+    // printf("main: going to wait\n");
     if(threadycast < nofslices){  //ERWTHSH: MPOROUME NA XRISIMOPOIHSOYME BROADCAST
-      pthread_cond_wait(&cond_m_assign, &mtx);
+      main_assign_w = 1;
+      cond_wait(&cond_m_assign, &mtx, __LINE__);
     }
-    printf("main: ready to notify workers\n");
+    // printf("main: ready to notify workers\n");
 
-    threadycast = 0;
-    pthread_mutex_unlock(&mtx);
+    threadycast = 0; // initialising for next computation
+    mtx_unlock(&mtx, __LINE__);
 
     // notify workers
     for (i = nofslices - 1; i > -1; i--){
-      printf("main: i = %d signal", i);
-      pthread_cond_signal(&cond_assign);
+      //printf("main: i = %d signal\n", i);
+      cond_signal(&cond_assign, __LINE__);
     }
 
     y=0;
     workersDone = 0;
     while (1){ // while not all workers done
 
-      pthread_mutex_lock(&mtx);
-      //for: up(sem_draw), breaks when it finds a worker which has downed its sem_draw
+      mtx_lock(&mtx, __LINE__);
+      // if no one has finished, main blocks
       if (nofjustfin == 0){
-        main_draw_w = 1;
-        pthread_cond_wait(&cond_draw, &mtx);
+        main_draw_w = 1; // exactly like the barber, right?!?!?!?! :D
+        cond_wait(&cond_draw, &mtx, __LINE__);
       }
 
+      //for: breaks when it finds a worker which has just finished
       for(i = 0; i < nofslices; i++){
-        printf("i = %d\n",i);
+        // printf("i = %d\n",i);
         if(draw_array[i] == JUST_FINISHED){
           draw_array[i] = !JUST_FINISHED;
           nofjustfin--;
-          printf("Main: printing %d\n", i);
+
           workersDone++;
+
+          printf("Main: printing %d\n", i);
           break;
         }
       }
 
-      pthread_mutex_unlock(&mtx);
+      mtx_unlock(&mtx, __LINE__);
 
       //when for-break occurs (a thread has just finished), it draws the result
       if(i < nofslices){
