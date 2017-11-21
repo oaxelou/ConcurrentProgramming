@@ -3,9 +3,11 @@
  */
 #include <stdio.h>
 
-#define PRINT_NAME(name, age) printf(name);\
-                         printf("!\n");\
-                         printf(age"\n");
+#define defineVar int v2
+#define PRINT_NAME(name, age) while(1){\
+                         printf("%s %d?!\n", #name, v##name);\
+                         printf(age"\n");break;\
+                       }
 
 #define VAR(label) volatile int var1[label];
 #define VAR1 static int var2 = 10;
@@ -16,7 +18,13 @@ int main(int argc,char *argv[]){
 
   EXECUTIE(int a = 12;printf("%d\n", a);printf("\n"););
 
-  PRINT_NAME("hi", "world");
+
+  printf("********************\n");
+  defineVar;
+  v2 = 123456;
+  PRINT_NAME(2, "world");
+  printf("********************\n");
+
   VAR(2);
   VAR1;
 
