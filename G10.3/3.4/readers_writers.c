@@ -36,6 +36,7 @@
                                     \
                                     if(no_q##label > 0){ \
                                       count_loop##label = 0; \
+                                      no_q##label--; \
                                       cond_signal(&queue##label, __LINE__); \
                                     } \
                                     else{ \
@@ -52,8 +53,8 @@ void *reader(void *argv){
   printf("reader going to get in\n");
   CCR_EXEC(X, (wrs == 0), rds++;);
 
-  printf("reader: reading data\n");
-  sleep(2);
+  printf("\t\t\treader: reading data\n");
+  sleep(3);
   printf("reader: data ok\n");
 
   CCR_EXEC(X, 1, rds--;);
@@ -63,42 +64,53 @@ void *reader(void *argv){
 }
 
 void *writer(void *argv){
-  int i;
-  for(i = 0; i < 5; i ++){
+  // int i;
+  // for(i = 0; i < 5; i ++){
     printf("writer %lu going to get in\n", (long unsigned)pthread_self());
     // printf("Hello from %lu\n", (long unsigned)pthread_self());
 
-    CCR_EXEC(X, (/*rds + */wrs == 0), wrs = 1;);
+    CCR_EXEC(X, (rds + wrs == 0), wrs = 1;);
 
-    printf("writer %lu: writing data\n", (long unsigned)pthread_self());
-    sleep(2);
+    printf("\t\t\twriter %lu: writing data\n", (long unsigned)pthread_self());
+    sleep(1);
 
     CCR_EXEC(X, (1 > 0), wrs = 0;);
     printf("writer %lu got out, rds = %d, wrs = %d\n\n\n", (long unsigned)pthread_self(), rds, wrs);
 
-  }
+  // }
 
   return(NULL);
 }
 
 int main(int argc, char *argv[]) {
-  pthread_t t1, t2;
+  pthread_t t1, t2, t3;
   int checkValue;
 
   CCR_INIT(X);
 
   wrs = rds = 0;
-  checkValue = pthread_create(&t1, NULL, writer, NULL);
+  checkValue = pthread_create(&t1, NULL, reader, NULL);
   if (checkValue) {
     printf("Error with reader thread create. Terminating...\n");
     return 1;
   }
 
-  // checkValue = pthread_create(&t2, NULL, writer, NULL);
-  // if (checkValue) {
-  //   printf("Error with writer thread create. Terminating...\n");
-  //   return 1;
-  // }
+  sleep(1);
+
+  checkValue = pthread_create(&t2, NULL, writer, NULL);
+  if (checkValue) {
+    printf("Error with writer thread create. Terminating...\n");
+    return 1;
+  }
+
+  sleep(1);
+
+  checkValue = pthread_create(&t3, NULL, reader, NULL);
+  if (checkValue) {
+    printf("Error with reader thread create. Terminating...\n");
+    return 1;
+  }
+
 
   printf("main woke up\n");
 
@@ -107,10 +119,15 @@ int main(int argc, char *argv[]) {
     printf("error with reader pthread_join\n");
   }
 
-  // checkValue = pthread_join(t2, NULL);
-  // if(checkValue){
-  //   printf("error with writer pthread_join\n");
-  // }
+  checkValue = pthread_join(t3, NULL);
+  if(checkValue){
+    printf("error with reader pthread_join\n");
+  }
+
+  checkValue = pthread_join(t2, NULL);
+  if(checkValue){
+    printf("error with writer pthread_join\n");
+  }
   printf("main bye\n");
 
   return 0;
