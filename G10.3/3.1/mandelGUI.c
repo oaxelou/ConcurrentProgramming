@@ -143,38 +143,38 @@ void *worker (void *arg){
   int mtx_res;
 
   //be sure to take the right args
-  pthread_cond_signal(&cond_args);
+  cond_signal(&cond_args, __LINE__);
 
   while(1){
     // wait for main to assign job
-    pthread_mutex_lock(&mtx);
+    mtx_lock(&mtx, __LINE__);
     threadycast++;
     printf("%d: threadycast = %d\n", my_no, threadycast);
     if(threadycast == nofslices){
       printf("%d: notifying main: everyone is here and waiting for the job\n", my_no);
       if(main_assign_w){
-        pthread_cond_signal(&cond_m_assign);
+        cond_signal(&cond_m_assign, __LINE__);
         main_assign_w = 0;
       }
     }
     // printf("worker %d: going to block\n", my_no);
 
-    pthread_cond_wait(&cond_assign, &mtx); // in CS to make sure that main doesn't "signal" before it "wait"s ?
+    cond_wait(&cond_assign, &mtx, __LINE__); // in CS to make sure that main doesn't "signal" before it "wait"s ?
     // printf("worker %d: starting working\n", my_no);
-    pthread_mutex_unlock(&mtx);
+    mtx_unlock(&mtx, __LINE__);
 
     // perform the Mandelbrot computation
     mandel_Calc((mandel_Pars*)slices+my_no,maxIterations,(int*)res + my_no*slices[my_no].imSteps*slices[my_no].reSteps);
 
     //notify main
-    pthread_mutex_lock(&mtx);
+    mtx_lock(&mtx, __LINE__);
     draw_array[my_no] = JUST_FINISHED;
     nofjustfin++;
     if(main_draw_w){
-      pthread_cond_signal(&cond_draw);
+      cond_signal(&cond_draw, __LINE__);
       main_draw_w = 0;
     }
-    pthread_mutex_unlock(&mtx);
+    mtx_unlock(&mtx, __LINE__);
 
   }
   return NULL;
