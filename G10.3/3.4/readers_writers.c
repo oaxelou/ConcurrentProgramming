@@ -1,3 +1,6 @@
+/* Testing CCR macros.
+*  readers&writers code, from page 8. (alternative)
+*/
 #include "mtx_cond.h"
 
 #define CCR_DECLARE(label) pthread_mutex_t mtx##label, mtx_q##label; \
