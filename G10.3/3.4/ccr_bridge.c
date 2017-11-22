@@ -13,7 +13,6 @@
  * the function for every car is the same.
  */
 #include "mtx_cond.h"
-#include <errno.h>
 
 
 #define CCR_DECLARE(label) pthread_mutex_t mtx##label, mtx_q##label; \
