@@ -34,6 +34,7 @@
                                     \
                                     if(no_q##label > 0){ \
                                       count_loop##label = 0; \
+                                      no_q##label--; \
                                       cond_signal(&queue##label, __LINE__); \
                                     } \
                                     else{ \
