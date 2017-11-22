@@ -148,6 +148,7 @@ void *worker (void *arg){
   while(1){
     // wait for main to assign job
     mtx_lock(&mtx, __LINE__);
+
     threadycast++;
     printf("%d: threadycast = %d\n", my_no, threadycast);
     if(threadycast == nofslices){
