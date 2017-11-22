@@ -12,11 +12,9 @@
  * Since all of the cars have to act the same when they try to enter and exit bridge
  * the function for every car is the same.
  */
-#include "my_sema.h"
 #include "mtx_cond.h"
 #include <errno.h>
 
-volatile my_bsem waitq[2];
 volatile int waiting[2];
 volatile int onbridge[2];
 volatile int carsPassing[2];
@@ -158,29 +156,29 @@ void read_car_args(int *args, int *nofred, int *nofblue){
   //printf("car color: %c, bridge_time: %d\n", car_color, bridge_time);
 }
 
-/*//auxiliary function
-void init_semaphores(){
+//auxiliary function
+void init_function(){
   int i;
 
-  my_bsem_init((my_bsem*)&mtx, 1, __LINE__);
+  mtx_init(&mtx, __LINE__);
   for(i = 0; i < 2; i++){
-    my_bsem_init((my_bsem*)&waitq[i], 0, __LINE__);
     waiting[i] = 0;
     onbridge[i] = 0;
     carsPassing[i] = -1;
+    cond_init(&queue[i], __LINE__);
   }
 }
 
 //auxiliary function
-void destroy_semaphores(){
+void destroy_function(){
   int i;
 
-  my_bsem_destroy((my_bsem*)&mtx, __LINE__);
+  mtx_destroy(&mtx, __LINE__);
   for(i = 0; i < 2; i++){
-    my_bsem_destroy((my_bsem*)&waitq[i], __LINE__);
+    cond_destroy(&queue[i], __LINE__);
   }
 }
-*/
+
 
 int main(int argc, char *argv[]) {
   int nofcars = 0, nofblue = 0, nofred = 0, i, args[2];
@@ -200,16 +198,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  //init_semaphores();
-  mtx_init(&mtx, __LINE__);
-  cond_init(&queue[0], __LINE__);
-  cond_init(&queue[1], __LINE__);
-
-  for(i = 0; i < 2; i++){
-    waiting[i] = 0;
-    onbridge[i] = 0;
-    carsPassing[i] = -1;
-  }
+  init_function();
 
   scanf("%d", &nofcars);
   car_threads = (pthread_t *)malloc(sizeof(pthread_t)*nofcars);
@@ -237,7 +226,7 @@ int main(int argc, char *argv[]) {
   sleep(1); //so that print_time_thread function prints one final time to confirm that last car(s) have exited the bridge
             // which means -> all zeros.
 
-  //destroy_semaphores();
+  destroy_function();
 
   printf("\nAll threads have terminated. The original input, counted by main, has:\n");
   printf("# of blue: %d\n", nofblue);
