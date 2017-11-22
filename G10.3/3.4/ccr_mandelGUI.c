@@ -13,16 +13,59 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
+#define CCR_DECLARE(label) pthread_mutex_t mtx##label, mtx_q##label; \
+                           pthread_cond_t queue##label;\
+                           volatile int no_q##label, count_loop##label;
+
+#define CCR_INIT(label) mtx_init(&mtx##label, __LINE__); \
+                        mtx_init(&mtx_q##label, __LINE__); \
+                        cond_init(&queue##label, __LINE__); \
+                        no_q##label = 0; count_loop##label = -1;
+
+#define CCR_EXEC(label, cond, body) mtx_lock(&mtx##label, __LINE__); \
+                                    mtx_lock(&mtx_q##label, __LINE__); \
+                                    while (!cond){ \
+                                      no_q##label++; \
+                                      if(count_loop##label >= 0){ \
+                                        count_loop##label++; \
+                                    \
+                                        if(count_loop##label == no_q##label){ \
+                                          count_loop##label = -1; \
+                                          mtx_unlock(&mtx##label, __LINE__); \
+                                        } \
+                                        else{ \
+                                          no_q##label--; cond_signal(&queue##label, __LINE__); \
+                                        } \
+                                      } \
+                                      else{ \
+                                        mtx_unlock(&mtx##label, __LINE__); \
+                                      }\
+                                      cond_wait(&queue##label, &mtx_q##label, __LINE__); \
+                                    } \
+                                    \
+                                    body \
+                                    \
+                                    if(no_q##label > 0){ \
+                                      count_loop##label = 0; \
+                                      no_q##label--; \
+                                      cond_signal(&queue##label, __LINE__); \
+                                    } \
+                                    else{ \
+                                      count_loop##label = -1; \
+                                      mtx_unlock(&mtx##label, __LINE__); \
+                                    } \
+                                    mtx_unlock(&mtx_q##label, __LINE__);
+// **************************************************
+
+CCR_DECLARE(X);
+
 volatile int *res, *draw_array;
 volatile mandel_Pars * slices;
 volatile int maxIterations, threadycast, nofslices;
 volatile int nofjustfin, main_assign_w, main_draw_w;
 
-pthread_mutex_t mtx;
-pthread_cond_t cond_args;
-pthread_cond_t cond_assign;
-pthread_cond_t cond_m_assign;
-pthread_cond_t cond_draw;
+volatile int cond_args, cond_assign, cond_draw;
+// pthread_cond_t cond_m_assign; //???
 
 #define JUST_FINISHED 1
 
@@ -188,8 +231,6 @@ int main(int argc, char *argv[]) {
   int xoff,yoff;
   long double reEnd,imEnd,reCenter,imCenter;
   pthread_t *pth_array;
-  pthread_mutexattr_t mtx_attr;
-  pthread_condattr_t cond_attr;
   int workersDone;
 
   printf("\n");
@@ -231,17 +272,18 @@ int main(int argc, char *argv[]) {
   pth_array = (pthread_t*) malloc(sizeof(pthread_t)*nofslices);
   draw_array = (volatile int *) malloc(sizeof(int)*nofslices);
 
-  //initialising mutex
-  mtx_init(&mtx, __LINE__);
+  //initialising ccr
+  CCR_INIT(X);
+  // mtx_init(&mtx, __LINE__);
 
   //initialising conditions
   threadycast = 0;
   main_draw_w = 0;
   main_assign_w = 0;
-  cond_init(&cond_args, __LINE__);
-  cond_init(&cond_assign, __LINE__);
-  cond_init(&cond_m_assign, __LINE__);
-  cond_init(&cond_draw, __LINE__);
+  // cond_init(&cond_args, __LINE__);
+  // cond_init(&cond_assign, __LINE__);
+  // cond_init(&cond_m_assign, __LINE__);
+  // cond_init(&cond_draw, __LINE__);
 
   // creating threads
   for (i=0; i<nofslices; i++){
