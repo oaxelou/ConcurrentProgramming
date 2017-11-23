@@ -245,7 +245,7 @@ int main(int argc, char *argv[]) {
   cond_init(&cond_assign, __LINE__);
   cond_init(&cond_m_assign, __LINE__);
   cond_init(&cond_draw, __LINE__);
-  cond_init(&cond_workers_wait, __LINE__);
+  cond_init(&cond_workers_block, __LINE__);
 
   // creating threads
   for (i=0; i<nofslices; i++){
