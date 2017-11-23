@@ -23,6 +23,7 @@ pthread_cond_t cond_args;
 pthread_cond_t cond_assign;
 pthread_cond_t cond_m_assign;
 pthread_cond_t cond_draw;
+pthread_cond_t cond_workers_block;
 
 #define JUST_FINISHED 1
 
@@ -175,6 +176,8 @@ void *worker (void *arg){
       cond_signal(&cond_draw, __LINE__);
       main_draw_w = 0;
     }
+    cond_wait(&cond_workers_block, &mtx, __LINE__); 
+    
     mtx_unlock(&mtx, __LINE__);
 
   }
@@ -242,6 +245,7 @@ int main(int argc, char *argv[]) {
   cond_init(&cond_assign, __LINE__);
   cond_init(&cond_m_assign, __LINE__);
   cond_init(&cond_draw, __LINE__);
+  cond_init(&cond_workers_wait, __LINE__);
 
   // creating threads
   for (i=0; i<nofslices; i++){
@@ -311,6 +315,7 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
+      cond_signal(&cond_workers_block, __LINE__);
 
       mtx_unlock(&mtx, __LINE__);
 
