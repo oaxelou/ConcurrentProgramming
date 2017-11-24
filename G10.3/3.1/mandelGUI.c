@@ -176,8 +176,8 @@ void *worker (void *arg){
       cond_signal(&cond_draw, __LINE__);
       main_draw_w = 0;
     }
-    cond_wait(&cond_workers_block, &mtx, __LINE__); 
-    
+    cond_wait(&cond_workers_block, &mtx, __LINE__);
+
     mtx_unlock(&mtx, __LINE__);
 
   }
