@@ -8,63 +8,20 @@
  * are dessigned with mutexes and conditions.
  */
 
- #include "mtx_cond.h"
+ #include "ccr.h"
+
  #include "mandelCore.h"
  #include <X11/Xlib.h>
  #include <X11/Xutil.h>
 
- #define CCR_DECLARE(label) pthread_mutex_t mtx##label, mtx_q##label; \
-                            pthread_cond_t queue##label;\
-                            volatile int no_q##label, count_loop##label;
-
- #define CCR_INIT(label) mtx_init(&mtx##label, __LINE__); \
-                         mtx_init(&mtx_q##label, __LINE__); \
-                         cond_init(&queue##label, __LINE__); \
-                         no_q##label = 0; count_loop##label = -1;
-
- #define CCR_EXEC(label, cond, body) mtx_lock(&mtx##label, __LINE__); \
-                                     mtx_lock(&mtx_q##label, __LINE__); \
-                                     while (!cond){ \
-                                       no_q##label++; \
-                                       if(count_loop##label >= 0){ \
-                                         count_loop##label++; \
-                                     \
-                                         if(count_loop##label == no_q##label){ \
-                                           count_loop##label = -1; \
-                                           mtx_unlock(&mtx##label, __LINE__); \
-                                         } \
-                                         else{ \
-                                           no_q##label--; cond_signal(&queue##label, __LINE__); \
-                                         } \
-                                       } \
-                                       else{ \
-                                         mtx_unlock(&mtx##label, __LINE__); \
-                                       }\
-                                       cond_wait(&queue##label, &mtx_q##label, __LINE__); \
-                                     } \
-                                     \
-                                     body \
-                                     \
-                                     if(no_q##label > 0){ \
-                                       count_loop##label = 0; \
-                                       no_q##label--; \
-                                       cond_signal(&queue##label, __LINE__); \
-                                     } \
-                                     else{ \
-                                       count_loop##label = -1; \
-                                       mtx_unlock(&mtx##label, __LINE__); \
-                                     } \
-                                     mtx_unlock(&mtx_q##label, __LINE__);
- // **************************************************
-
- CCR_DECLARE(X);
+CCR_DECLARE(X);
 
 volatile int *res, *draw_array;
 volatile mandel_Pars * slices;
 volatile int maxIterations, nofslices;
 volatile int nofjustfin, main_assign_w, main_draw_w;
 
-volatile int cond_args, cond_assign, cond_workers_block;
+volatile int args_taken, jobs_assigned, unprinted_slices;
 
 #define JUST_FINISHED 1
 
@@ -187,7 +144,7 @@ void *worker (void *arg){
   //be sure to take the right args
   CCR_EXEC(X, \
     /* When */  1, \
-    cond_args = 1; \
+    args_taken = 1; \
   );
 
   while(1){
@@ -195,8 +152,8 @@ void *worker (void *arg){
 
     // wait for main to assign job
     CCR_EXEC(X, \
-      /* When */  cond_assign > 0, \
-      cond_assign--; \
+      /* When */  jobs_assigned > 0, \
+      jobs_assigned--; \
     );
 
     // perform the Mandelbrot computation
@@ -210,8 +167,8 @@ void *worker (void *arg){
     );
 
     CCR_EXEC(X, \
-      /* When */  cond_workers_block > 0, \
-      cond_workers_block--; \
+      /* When */  unprinted_slices > 0, \
+      unprinted_slices--; \
     );
   }
   return NULL;
@@ -270,9 +227,9 @@ int main(int argc, char *argv[]) {
   //initialising conditions
   main_draw_w = 0;
   main_assign_w = 0;
-  cond_args = 0;
-  cond_assign = 0;
-  cond_workers_block = 0;
+  args_taken = 0;
+  jobs_assigned = 0;
+  unprinted_slices = 0;
   CCR_INIT(X);
 
   // creating threads
@@ -283,8 +240,8 @@ int main(int argc, char *argv[]) {
       // waits for the thread to take its argument
       // before continuing with the next one
       CCR_EXEC(X, \
-        /* When */  cond_args, \
-        cond_args = 0; \
+        /* When */  args_taken, \
+        args_taken = 0; \
       );
   }
 
@@ -305,8 +262,8 @@ int main(int argc, char *argv[]) {
 
     CCR_EXEC(X, \
       /* When */  1, \
-      cond_assign = nofslices; \
-      cond_workers_block = nofslices; \
+      jobs_assigned = nofslices; \
+      unprinted_slices = nofslices; \
     );
 
     y=0;
