@@ -8,64 +8,63 @@
  * are dessigned with mutexes and conditions.
  */
 
-#include "mtx_cond.h"
-#include "mandelCore.h"
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+ #include "mtx_cond.h"
+ #include "mandelCore.h"
+ #include <X11/Xlib.h>
+ #include <X11/Xutil.h>
 
-#define CCR_DECLARE(label) pthread_mutex_t mtx##label, mtx_q##label; \
-                           pthread_cond_t queue##label;\
-                           volatile int no_q##label, count_loop##label;
+ #define CCR_DECLARE(label) pthread_mutex_t mtx##label, mtx_q##label; \
+                            pthread_cond_t queue##label;\
+                            volatile int no_q##label, count_loop##label;
 
-#define CCR_INIT(label) mtx_init(&mtx##label, __LINE__); \
-                        mtx_init(&mtx_q##label, __LINE__); \
-                        cond_init(&queue##label, __LINE__); \
-                        no_q##label = 0; count_loop##label = -1;
+ #define CCR_INIT(label) mtx_init(&mtx##label, __LINE__); \
+                         mtx_init(&mtx_q##label, __LINE__); \
+                         cond_init(&queue##label, __LINE__); \
+                         no_q##label = 0; count_loop##label = -1;
 
-#define CCR_EXEC(label, cond, body) mtx_lock(&mtx##label, __LINE__); \
-                                    mtx_lock(&mtx_q##label, __LINE__); \
-                                    while (!cond){ \
-                                      no_q##label++; \
-                                      if(count_loop##label >= 0){ \
-                                        count_loop##label++; \
-                                    \
-                                        if(count_loop##label == no_q##label){ \
-                                          count_loop##label = -1; \
-                                          mtx_unlock(&mtx##label, __LINE__); \
-                                        } \
-                                        else{ \
-                                          no_q##label--; cond_signal(&queue##label, __LINE__); \
-                                        } \
-                                      } \
-                                      else{ \
-                                        mtx_unlock(&mtx##label, __LINE__); \
-                                      }\
-                                      cond_wait(&queue##label, &mtx_q##label, __LINE__); \
-                                    } \
-                                    \
-                                    body \
-                                    \
-                                    if(no_q##label > 0){ \
-                                      count_loop##label = 0; \
-                                      no_q##label--; \
-                                      cond_signal(&queue##label, __LINE__); \
-                                    } \
-                                    else{ \
-                                      count_loop##label = -1; \
-                                      mtx_unlock(&mtx##label, __LINE__); \
-                                    } \
-                                    mtx_unlock(&mtx_q##label, __LINE__);
-// **************************************************
+ #define CCR_EXEC(label, cond, body) mtx_lock(&mtx##label, __LINE__); \
+                                     mtx_lock(&mtx_q##label, __LINE__); \
+                                     while (!cond){ \
+                                       no_q##label++; \
+                                       if(count_loop##label >= 0){ \
+                                         count_loop##label++; \
+                                     \
+                                         if(count_loop##label == no_q##label){ \
+                                           count_loop##label = -1; \
+                                           mtx_unlock(&mtx##label, __LINE__); \
+                                         } \
+                                         else{ \
+                                           no_q##label--; cond_signal(&queue##label, __LINE__); \
+                                         } \
+                                       } \
+                                       else{ \
+                                         mtx_unlock(&mtx##label, __LINE__); \
+                                       }\
+                                       cond_wait(&queue##label, &mtx_q##label, __LINE__); \
+                                     } \
+                                     \
+                                     body \
+                                     \
+                                     if(no_q##label > 0){ \
+                                       count_loop##label = 0; \
+                                       no_q##label--; \
+                                       cond_signal(&queue##label, __LINE__); \
+                                     } \
+                                     else{ \
+                                       count_loop##label = -1; \
+                                       mtx_unlock(&mtx##label, __LINE__); \
+                                     } \
+                                     mtx_unlock(&mtx_q##label, __LINE__);
+ // **************************************************
 
-CCR_DECLARE(X);
+ CCR_DECLARE(X);
 
 volatile int *res, *draw_array;
 volatile mandel_Pars * slices;
-volatile int maxIterations, threadycast, nofslices;
+volatile int maxIterations, nofslices;
 volatile int nofjustfin, main_assign_w, main_draw_w;
 
-volatile int cond_args, cond_assign, cond_draw;
-// pthread_cond_t cond_m_assign; //???
+volatile int cond_args, cond_assign, cond_workers_block;
 
 #define JUST_FINISHED 1
 
@@ -186,40 +185,34 @@ void *worker (void *arg){
   int mtx_res;
 
   //be sure to take the right args
-  cond_signal(&cond_args, __LINE__);
+  CCR_EXEC(X, \
+    /* When */  1, \
+    cond_args = 1; \
+  );
 
   while(1){
+
+
     // wait for main to assign job
-    mtx_lock(&mtx, __LINE__);
-
-    threadycast++;
-    printf("%d: threadycast = %d\n", my_no, threadycast);
-    if(threadycast == nofslices){
-      printf("%d: notifying main: everyone is here and waiting for the job\n", my_no);
-      if(main_assign_w){
-        cond_signal(&cond_m_assign, __LINE__);
-        main_assign_w = 0;
-      }
-    }
-    // printf("worker %d: going to block\n", my_no);
-
-    cond_wait(&cond_assign, &mtx, __LINE__); // in CS to make sure that main doesn't "signal" before it "wait"s ?
-    // printf("worker %d: starting working\n", my_no);
-    mtx_unlock(&mtx, __LINE__);
+    CCR_EXEC(X, \
+      /* When */  cond_assign > 0, \
+      cond_assign--; \
+    );
 
     // perform the Mandelbrot computation
     mandel_Calc((mandel_Pars*)slices+my_no,maxIterations,(int*)res + my_no*slices[my_no].imSteps*slices[my_no].reSteps);
 
     //notify main
-    mtx_lock(&mtx, __LINE__);
-    draw_array[my_no] = JUST_FINISHED;
-    nofjustfin++;
-    if(main_draw_w){
-      cond_signal(&cond_draw, __LINE__);
-      main_draw_w = 0;
-    }
-    mtx_unlock(&mtx, __LINE__);
+    CCR_EXEC(X, \
+      /* When */  1, \
+      draw_array[my_no] = JUST_FINISHED; \
+      nofjustfin++; \
+    );
 
+    CCR_EXEC(X, \
+      /* When */  cond_workers_block > 0, \
+      cond_workers_block--; \
+    );
   }
   return NULL;
 }
@@ -231,6 +224,8 @@ int main(int argc, char *argv[]) {
   int xoff,yoff;
   long double reEnd,imEnd,reCenter,imCenter;
   pthread_t *pth_array;
+  pthread_mutexattr_t mtx_attr;
+  pthread_condattr_t cond_attr;
   int workersDone;
 
   printf("\n");
@@ -272,29 +267,25 @@ int main(int argc, char *argv[]) {
   pth_array = (pthread_t*) malloc(sizeof(pthread_t)*nofslices);
   draw_array = (volatile int *) malloc(sizeof(int)*nofslices);
 
-  //initialising ccr
-  CCR_INIT(X);
-  // mtx_init(&mtx, __LINE__);
-
   //initialising conditions
-  threadycast = 0;
   main_draw_w = 0;
   main_assign_w = 0;
-  // cond_init(&cond_args, __LINE__);
-  // cond_init(&cond_assign, __LINE__);
-  // cond_init(&cond_m_assign, __LINE__);
-  // cond_init(&cond_draw, __LINE__);
+  cond_args = 0;
+  cond_assign = 0;
+  cond_workers_block = 0;
+  CCR_INIT(X);
 
   // creating threads
   for (i=0; i<nofslices; i++){
-      mtx_lock(&mtx, __LINE__); // to lock xreiazetai na einai edw ?
       if (pthread_create(&pth_array[i], NULL, worker, (void*)&i))
           printf("error at pthread_create no: %d\n", i);
 
       // waits for the thread to take its argument
       // before continuing with the next one
-      cond_wait(&cond_args, &mtx, __LINE__);
-      mtx_unlock(&mtx, __LINE__);
+      CCR_EXEC(X, \
+        /* When */  cond_args, \
+        cond_args = 0; \
+      );
   }
 
 // ************************* END OF INITIALISATIONS *****************************
@@ -312,49 +303,32 @@ int main(int argc, char *argv[]) {
     // create N jobs and assign them to workers
     mandel_Slice(&pars, nofslices, (mandel_Pars *) slices);
 
-    mtx_lock(&mtx, __LINE__);
-    // printf("main: going to wait\n");
-    if(threadycast < nofslices){  //ERWTHSH: MPOROUME NA XRISIMOPOIHSOYME BROADCAST
-      main_assign_w = 1;
-      cond_wait(&cond_m_assign, &mtx, __LINE__);
-    }
-    // printf("main: ready to notify workers\n");
-
-    threadycast = 0; // initialising for next computation
-    mtx_unlock(&mtx, __LINE__);
-
-    // notify workers
-    for (i = nofslices - 1; i > -1; i--){
-      //printf("main: i = %d signal\n", i);
-      cond_signal(&cond_assign, __LINE__);
-    }
+    CCR_EXEC(X, \
+      /* When */  1, \
+      cond_assign = nofslices; \
+      cond_workers_block = nofslices; \
+    );
 
     y=0;
     workersDone = 0;
     while (1){ // while not all workers done
 
-      mtx_lock(&mtx, __LINE__);
+      CCR_EXEC(X, \
+        /* When */ nofjustfin > 0, \
+        //for: breaks when it finds a worker which has just finished
+        for(i = 0; i < nofslices; i++){ \
+          // printf("i = %d\n",i);
+          if(draw_array[i] == JUST_FINISHED){ \
+            draw_array[i] = !JUST_FINISHED; \
+            nofjustfin--; \
+            workersDone++; \
+            \
+            printf("Main: printing %d\n", i); \
+            break; \
+          } \
+        } \
+      );
       // if no one has finished, main blocks
-      if (nofjustfin == 0){
-        main_draw_w = 1; // exactly like the barber, right?!?!?!?! :D
-        cond_wait(&cond_draw, &mtx, __LINE__);
-      }
-
-      //for: breaks when it finds a worker which has just finished
-      for(i = 0; i < nofslices; i++){
-        // printf("i = %d\n",i);
-        if(draw_array[i] == JUST_FINISHED){
-          draw_array[i] = !JUST_FINISHED;
-          nofjustfin--;
-
-          workersDone++;
-
-          printf("Main: printing %d\n", i);
-          break;
-        }
-      }
-
-      mtx_unlock(&mtx, __LINE__);
 
       //when for-break occurs (a thread has just finished), it draws the result
       if(i < nofslices){
