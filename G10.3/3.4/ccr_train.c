@@ -16,7 +16,6 @@ volatile int pas_entering, pas_exiting;
 
 volatile int waiting, onboard;
 volatile int trainCapacity;
-volatile int train_w_fill, train_w_empty;
 
 #define RIDE_DURATION 2
 
@@ -46,6 +45,7 @@ void train_enter(){
       onboard++; \
       waiting--; \
       if(onboard == trainCapacity){ \
+        printf("\t"ANSI_COLOR_CYAN"Train full. Going to Start."ANSI_COLOR_RESET"\n");
         pas_entering = 0; \
         train_start = 1; \
       } \
