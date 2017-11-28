@@ -20,7 +20,7 @@ pthread_cond_t pas_exiting;
 
 volatile int waiting, onboard;
 volatile int trainCapacity;
-volatile int train_w_fill, train_w_empty;
+volatile int train_w_fill, train_w_start, train_w_empty;
 
 #define RIDE_DURATION 2
 
@@ -54,8 +54,10 @@ void train_enter(){
     onboard++;
     cond_signal(&pas_entering, __LINE__);
   }
-  else if(onboard == trainCapacity){
+  else if(onboard == trainCapacity && train_w_start){
     printf("\t"ANSI_COLOR_CYAN"Train full. Going to Start."ANSI_COLOR_RESET"\n");
+
+    train_w_start = 0;
     cond_signal(&train_start, __LINE__); //notify the train to start
   }
 
@@ -128,6 +130,7 @@ void *train(void *args){
     cond_signal(&pas_entering, __LINE__); // notify passangers to enter
 
     if (onboard < trainCapacity){
+      train_w_start = 1;
       cond_wait(&train_start, &mtx, __LINE__); // waits until last passanger has got in
     }
     printf("after wait train start\n");
@@ -174,7 +177,7 @@ void init_mtx_cond(){
   cond_init(&pas_exiting, __LINE__);
   cond_init(&train_start, __LINE__);
 
-  waiting = onboard = 0;
+  waiting = onboard = train_w_start = 0;
   train_w_fill = train_w_empty = 0;
 }
 
