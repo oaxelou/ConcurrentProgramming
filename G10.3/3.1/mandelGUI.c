@@ -317,7 +317,6 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
-      cond_signal(&cond_workers_block, __LINE__);
 
       mtx_unlock(&mtx, __LINE__);
 
@@ -333,8 +332,11 @@ int main(int argc, char *argv[]) {
         }
       }
       // checks if everyone has finished, if so, breaks out of while
-      if(workersDone == nofslices)
-          break;
+      if(workersDone == nofslices){
+        for(i = 0; i < nofslices; i++)
+          cond_signal(&cond_workers_block, __LINE__);
+        break;
+      }
     }
 
 
