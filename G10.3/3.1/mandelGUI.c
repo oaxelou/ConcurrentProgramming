@@ -157,8 +157,8 @@ void *worker (void *arg){
     if(threadycast == nofslices){
       printf("%d: notifying main: everyone is here and waiting for the job\n", my_no);
       if(main_assign_w){
-        cond_signal(&cond_m_assign, __LINE__);
         main_assign_w = 0;
+        cond_signal(&cond_m_assign, __LINE__);
       }
     }
     // printf("worker %d: going to block\n", my_no);
@@ -175,8 +175,8 @@ void *worker (void *arg){
     draw_array[my_no] = JUST_FINISHED;
     nofjustfin++;
     if(main_draw_w){
-      cond_signal(&cond_draw, __LINE__);
       main_draw_w = 0;
+      cond_signal(&cond_draw, __LINE__);
     }
     cond_wait(&cond_workers_block, &mtx, __LINE__);
 
