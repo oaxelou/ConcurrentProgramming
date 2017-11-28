@@ -143,9 +143,11 @@ void *worker (void *arg){
   int my_no = *(int *)arg;
   int mtx_res;
 
+  mtx_lock(&mtx, __LINE__);
   //be sure to take the right args
   cond_signal(&cond_args, __LINE__);
 
+  mtx_unlock(&mtx, __LINE__);
   while(1){
     // wait for main to assign job
     mtx_lock(&mtx, __LINE__);
