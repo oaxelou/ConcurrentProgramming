@@ -9,6 +9,8 @@
  *
  * The cars from one direction are considered as blue cars and the others as red.
  *
+ * Implemented with conditions and mutexes
+ *
  * Since all of the cars have to act the same when they try to enter and exit bridge
  * the function for every car is the same.
  */
@@ -33,8 +35,7 @@ const char *colors[] = {"red", "blue"};
  * The car blocks when the bridge is full, when cars of the other color are on bridge
  * or when cars of the other color have been waiting for a very long time.
  *
- * Since the synchronization is made with bsem the very first car that is
- * unblocked has to unblock the others behind him.
+ * First car that unblocks, unblocks the others behind him.
  */
 void bridge_enter(int my_color){
 
@@ -62,14 +63,11 @@ void bridge_enter(int my_color){
       waiting[my_color]--;
       onbridge[my_color]++;
       cond_signal(&queue[my_color], __LINE__);
-
     }
   }
   else{
     onbridge[my_color]++;
-
   }
-
   mtx_unlock(&mtx, __LINE__);
 }
 
@@ -128,9 +126,7 @@ void *print_time_screenshot(void *arg){
 
   while(1){
     i++;
-    mtx_lock(&mtx, __LINE__);
     printf("time: %3d  onbridge[red, blue] = [%d, %d], waiting[red, blue] = [%d, %d]\n", i, onbridge[RED], onbridge[BLUE], waiting[RED], waiting[BLUE]);
-    mtx_unlock(&mtx, __LINE__);
     sleep(1);
   }
 
