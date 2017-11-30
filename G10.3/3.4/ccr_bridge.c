@@ -9,6 +9,8 @@
  *
  * The cars from one direction are considered as blue cars and the others as red.
  *
+ * The synchronization is done with Condition Critical Regions (ccr).
+ *
  * Since all of the cars have to act the same when they try to enter and exit bridge
  * the function for every car is the same.
  */

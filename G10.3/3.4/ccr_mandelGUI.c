@@ -5,7 +5,7 @@
  * Every worker thread computes a slice of the final image and the main thread draws the result
  *
  * The synchronization and the communication betweeen main thread and workers
- * are dessigned with mutexes and conditions.
+ * are dessigned with Condition Critical Regions (ccr).
  */
 
  #include "ccr.h"
@@ -148,8 +148,6 @@ void *worker (void *arg){
   );
 
   while(1){
-
-
     // wait for main to assign job
     CCR_EXEC(X, \
       /* When */  jobs_assigned > 0, \
@@ -224,7 +222,7 @@ int main(int argc, char *argv[]) {
   pth_array = (pthread_t*) malloc(sizeof(pthread_t)*nofslices);
   draw_array = (volatile int *) malloc(sizeof(int)*nofslices);
 
-  //initialising conditions
+  //initialisations
   main_draw_w = 0;
   main_assign_w = 0;
   args_taken = 0;
@@ -274,7 +272,6 @@ int main(int argc, char *argv[]) {
         /* When */ nofjustfin > 0, \
         //for: breaks when it finds a worker which has just finished
         for(i = 0; i < nofslices; i++){ \
-          // printf("i = %d\n",i);
           if(draw_array[i] == JUST_FINISHED){ \
             draw_array[i] = !JUST_FINISHED; \
             nofjustfin--; \

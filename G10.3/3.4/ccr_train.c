@@ -4,6 +4,8 @@
  * This program simulates a roller coaster.
  * Every new ride begins when train is full.
  *
+ * The synchronization is done with Condition Critical Regions (ccr).
+ *
  * The program never terminates because the train never stops.
  */
 //#include "my_sema.h"
