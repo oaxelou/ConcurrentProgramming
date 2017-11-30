@@ -4,9 +4,10 @@
  * This program simulates a roller coaster.
  * Every new ride begins when train is full.
  *
+ * Implemented with conditions and mutexes
+ *
  * The program never terminates because the train never stops.
  */
-//#include "my_sema.h"
 #include "mtx_cond.h"
 #include <errno.h>
 
@@ -75,12 +76,10 @@ void train_exit(){
   cond_wait(&pas_exiting, &mtx, __LINE__);
 
   if(onboard > 0){
-    printf("found sb\n");
     onboard--;
     cond_signal(&pas_exiting, __LINE__);
   }
   else if(onboard == 0 && train_w_empty == 1){
-    printf("waking up train\n");
     train_w_empty = 0;
     cond_signal(&wait_to_empty, __LINE__);
   }
@@ -133,7 +132,6 @@ void *train(void *args){
       train_w_start = 1;
       cond_wait(&train_start, &mtx, __LINE__); // waits until last passanger has got in
     }
-    printf("after wait train start\n");
 
     sleep(RIDE_DURATION);
 
@@ -142,7 +140,6 @@ void *train(void *args){
 
     if (onboard > 0){
       train_w_empty = 1;
-      printf("train about to wait\n");
       cond_wait(&wait_to_empty, &mtx, __LINE__); //Waits for the last passanger to exit
     }
     mtx_unlock(&mtx, __LINE__);
@@ -161,9 +158,7 @@ void *print_time_screenshot(void *arg){
 
   while(1){
     i++;
-
 	  printf("time: %3d  onboard = %d, waiting = %d\n", i, onboard, waiting);
-
     sleep(1);
   }
   return NULL;
