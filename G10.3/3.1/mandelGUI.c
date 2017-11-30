@@ -153,10 +153,8 @@ void *worker (void *arg){
     mtx_lock(&mtx, __LINE__);
 
     threadycast++;
-    printf("%d: threadycast = %d\n", my_no, threadycast);
     if(threadycast == nofslices){
-      printf("%d: notifying main: everyone is here and waiting for the job\n", my_no);
-      if(main_assign_w){
+      if(main_assign_w){ // if main has arruved before the last worker (has blocked)
         main_assign_w = 0;
         cond_signal(&cond_m_assign, __LINE__);
       }
@@ -236,10 +234,8 @@ int main(int argc, char *argv[]) {
   pth_array = (pthread_t*) malloc(sizeof(pthread_t)*nofslices);
   draw_array = (volatile int *) malloc(sizeof(int)*nofslices);
 
-  //initialising mutex
+  //initialisation of mtx, ints & conditions
   mtx_init(&mtx, __LINE__);
-
-  //initialising conditions
   threadycast = 0;
   main_draw_w = 0;
   main_assign_w = 0;
