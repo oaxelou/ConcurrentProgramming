@@ -42,14 +42,14 @@ void bridge_enter(int my_color){
         if(carsPassing[my_color] == -1){ \
           carsPassing[my_color] = 0; \
         } \
-        carsPassing[my_color]++; \  //starts counting how many same-colored cars pass while other color waits
+        carsPassing[my_color]++; /*starts counting how many same-colored cars pass while other color waits*/ \
       } \
       waiting[my_color]++; \
   );
 
   CCR_EXEC(X, \
     /* When */ (onbridge[!my_color] == 0 && (onbridge[my_color] < bridgeCapacity) && carsPassing[my_color] <= MAX_PASSING), \
-      if(carsPassing[!my_color] >= 0){ \  //first of my color solving starvation
+      if(carsPassing[!my_color] >= 0){ /*first of my color solving starvation*/ \
         carsPassing[!my_color] = -1; \
       } \
       onbridge[my_color]++; \
