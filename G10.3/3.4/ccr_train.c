@@ -109,8 +109,6 @@ void *train(void *args){
       train_start = 0; \
     );
 
-    printf("after wait train start\n");
-
     sleep(RIDE_DURATION);
 
     CCR_EXEC(X, \
