@@ -45,13 +45,14 @@ void bridge_enter(int my_color){
     carsPassing[my_color]++;
   }
 
+  //full bridge or other color (waiting too long || on bridge)
   if(onbridge[!my_color] || (onbridge[my_color] >= bridgeCapacity) || carsPassing[my_color] > MAX_PASSING){
     waiting[my_color]++;
 
     if(carsPassing[!my_color] == -1){
       carsPassing[!my_color] = 0;
     }
-    //printf("%s: about to wait\n", colors[my_color]);
+
     cond_wait(&queue[my_color], &mtx, __LINE__);
 
     if(carsPassing[!my_color] >= 0){
@@ -85,7 +86,8 @@ void bridge_exit(int my_color){
     onbridge[!my_color]++;
     cond_signal(&queue[!my_color], __LINE__);
   }
-  else if(onbridge[my_color] >= bridgeCapacity - 1 && waiting[my_color] > 0 ){ //the bridge is not full anymore, allows of same color to pass
+  //the bridge is not full anymore, allows of same color to pass
+  else if(onbridge[my_color] >= bridgeCapacity - 1 && waiting[my_color] > 0 ){
     waiting[my_color]--;
     onbridge[my_color]++;
     cond_signal(&queue[my_color], __LINE__);
@@ -149,7 +151,6 @@ void read_car_args(int *args, int *nofred, int *nofblue){
     printf("something went HORRIBLY wrong: input not suitable\n");
     exit(1);
   }
-  //printf("car color: %c, bridge_time: %d\n", car_color, bridge_time);
 }
 
 //auxiliary function
@@ -180,8 +181,6 @@ int main(int argc, char *argv[]) {
   int nofcars = 0, nofblue = 0, nofred = 0, i, args[2];
   pthread_t *car_threads;
   pthread_t print_time_thread;
-  pthread_mutexattr_t mtx_attr;
-  pthread_condattr_t cond_attr;
 
   if(argc != 2){
     printf("Wrong number of arguments. Terminating.\n");
