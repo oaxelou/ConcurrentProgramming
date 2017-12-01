@@ -8,6 +8,7 @@
  *
  * The program never terminates because the train never stops.
  */
+ #define _GNU_SOURCE
 #include "mtx_cond.h"
 #include <errno.h>
 
@@ -47,18 +48,20 @@ void train_enter(){
   }
 
   cond_wait(&pas_entering, &mtx, __LINE__);  //waiting for train to allow them to get in
-
+  // printf("woke up and onboard = %d\n", onboard);
+  waiting--;
+  onboard++;
 
   if(onboard < trainCapacity){    //unblock one passenger behind him
-    waiting--;
-    onboard++;
     cond_signal(&pas_entering, __LINE__);
   }
-  else if(onboard == trainCapacity && train_w_start){
+  else if(onboard == trainCapacity){
     printf("\t"ANSI_COLOR_CYAN"Train full. Going to Start."ANSI_COLOR_RESET"\n");
 
-    train_w_start = 0;
-    cond_signal(&train_start, __LINE__); //notify the train to start
+    if(train_w_start){
+      train_w_start = 0;
+      cond_signal(&train_start, __LINE__); //notify the train to start
+    }
   }
 
   mtx_unlock(&mtx, __LINE__);
@@ -73,6 +76,7 @@ void train_exit(){
   mtx_lock(&mtx, __LINE__);
   cond_wait(&pas_exiting, &mtx, __LINE__);
 
+  // printf("going to exit with onboard = %d\n", onboard);
   if(onboard > 0){  //unblock one behind them
     onboard--;
     cond_signal(&pas_exiting, __LINE__);
@@ -123,9 +127,10 @@ void *train(void *args){
       cond_wait(&wait_to_fill, &mtx, __LINE__); // waits until enough passengers have arrived
     }
 
-    onboard++; waiting--;
+    // onboard++; waiting--;
+    // printf("train. going to wake up first passanger with onboard = %d\n", onboard);
     cond_signal(&pas_entering, __LINE__); // notify passengers to enter
-
+    // printf("train after signa: onboard = %d\n", onboard);
     if (onboard < trainCapacity){
       train_w_start = 1;
       cond_wait(&train_start, &mtx, __LINE__); // waits until last passenger has got in
@@ -139,6 +144,7 @@ void *train(void *args){
     if (onboard > 0){
       train_w_empty = 1;
       cond_wait(&wait_to_empty, &mtx, __LINE__); // waits for the last passenger to exit
+      // printf("just woke up train. everybode gone\n");
     }
     mtx_unlock(&mtx, __LINE__);
   }
