@@ -27,11 +27,10 @@ volatile int train_w_fill, train_w_start, train_w_empty;
 
 /* Controls when a passenger enters.
  *
- * If there are enough passangers for the train to start, they notify the train
+ * If there are enough pasengers for the train to start, they notify the train
  * and then the train allows them to enter.
  *
- * Since the synchronization is made with bsem the very first passenger that enters
- * the train has to unblock the others behind him.
+ * The first passenger that unblocks, unblocks the others behind him.
  *
  * The last passenger that enters notifies the train to begin the ride.
  */
@@ -41,7 +40,7 @@ void train_enter(){
   waiting++;
 
   // enough passengers to notify the train to start taking passengers
-  // and train is waiting
+  // and train is actually waiting
   if(waiting == trainCapacity && train_w_fill == 1){
     train_w_fill = 0;
     cond_signal(&wait_to_fill, __LINE__);
@@ -71,15 +70,14 @@ void train_enter(){
  */
 void train_exit(){
 
-
   mtx_lock(&mtx, __LINE__);
   cond_wait(&pas_exiting, &mtx, __LINE__);
 
-  if(onboard > 0){
+  if(onboard > 0){  //unblock one behind them
     onboard--;
     cond_signal(&pas_exiting, __LINE__);
   }
-  else if(onboard == 0 && train_w_empty == 1){
+  else if(onboard == 0 && train_w_empty == 1){  //last passenger notifies train it has emptied
     train_w_empty = 0;
     cond_signal(&wait_to_empty, __LINE__);
   }
@@ -122,25 +120,25 @@ void *train(void *args){
 
     if(waiting < trainCapacity){
       train_w_fill = 1;
-      cond_wait(&wait_to_fill, &mtx, __LINE__); //waits until enough passangers have arrived
+      cond_wait(&wait_to_fill, &mtx, __LINE__); // waits until enough passengers have arrived
     }
 
     onboard++; waiting--;
-    cond_signal(&pas_entering, __LINE__); // notify passangers to enter
+    cond_signal(&pas_entering, __LINE__); // notify passengers to enter
 
     if (onboard < trainCapacity){
       train_w_start = 1;
-      cond_wait(&train_start, &mtx, __LINE__); // waits until last passanger has got in
+      cond_wait(&train_start, &mtx, __LINE__); // waits until last passenger has got in
     }
 
     sleep(RIDE_DURATION);
 
     onboard--;
-    cond_signal(&pas_exiting, __LINE__); // notifies one passanger to exit
+    cond_signal(&pas_exiting, __LINE__); // notifies one passenger to exit
 
     if (onboard > 0){
       train_w_empty = 1;
-      cond_wait(&wait_to_empty, &mtx, __LINE__); //Waits for the last passanger to exit
+      cond_wait(&wait_to_empty, &mtx, __LINE__); // waits for the last passenger to exit
     }
     mtx_unlock(&mtx, __LINE__);
   }
@@ -148,7 +146,7 @@ void *train(void *args){
 }
 
 /* DEBUGGING FUNCTION
- * This function prints every second the values of waiting passangers and passangers onboard
+ * This function prints every second the values of waiting passengers and passengers onboard
  */
 void *print_time_screenshot(void *arg){
   int i = 0;
