@@ -139,9 +139,14 @@ localVar *find_array_name(char name[] /*tou stul "argv[3]" */, int lvalue/*if 1:
       if(print_flag == PRINT_REPORT){
         printf("Error 404: End of array and node not found with name: %s\n", name);
       }
-      return(realloc_array(current->prev, array_name, \
-                           atoi(current->prev->name + strlen(array_name) + 1), \
-                           atoi(name + strlen(array_name) + 1)));
+      if(lvalue){
+        return(realloc_array(current->prev, array_name, \
+               atoi(current->prev->name + strlen(array_name) + 1), \
+               atoi(name + strlen(array_name) + 1)));
+      }
+      else{
+        return NULL;
+      }
     }
 
     if(array_area && strcmp(current->name, name) == 0){
@@ -156,18 +161,27 @@ localVar *find_array_name(char name[] /*tou stul "argv[3]" */, int lvalue/*if 1:
     if(print_flag == PRINT_REPORT){
       printf("Last node of the list is type \"array\"\n");
     }
-    return (realloc_array(head->prev, array_name, \
-            atoi(head->prev->name + strlen(array_name) + 1), \
-            atoi(name + strlen(array_name) + 1)));
+    if(lvalue){
+      return (realloc_array(head->prev, array_name, \
+              atoi(head->prev->name + strlen(array_name) + 1), \
+              atoi(name + strlen(array_name) + 1)));
+    }
+    else{
+      return NULL;
+    }
   }
   else{
     if(print_flag == PRINT_REPORT){
       printf("Nothing of type \"array\" in list\n");
     }
-    return create_array(array_name, atoi(name + strlen(array_name) + 1));
+    if(lvalue){
+      return create_array(array_name, atoi(name + strlen(array_name) + 1));
+    }
+    else{
+      return NULL;
+    }
   }
 }
-
 
 void print_contents(){
   localVar *current;
@@ -201,6 +215,23 @@ int modify_node(char name[], int new_value, int print_flag){
   return 0;
 }
 
+int read_node(char name[], int print_flag){
+  localVar *current;
+
+  if(strchr(name, '[') != NULL){
+    current = find_array_name(name, !CREATE_PERMISSION, print_flag);
+  }
+  else{
+    current = find_name(name, !CREATE_PERMISSION, print_flag);
+  }
+  if(current == NULL){
+    fprintf(stderr, "Syntax error: %s used uninitialised in this.\n", name);
+    exit(1);
+  }
+
+  return current->value;
+}
+
 void destroy_list(localVar *head){
   localVar *current = head->next->next;
 
@@ -220,30 +251,37 @@ void destroy_list(localVar *head){
 
 int main(int argc, char *argv[]) {
   // localVar *current;
-  int i, value;
-  char temp[10];
+  // int i, value;
+  // char temp[10];
 
   head = init_list(__LINE__);
 
   print_contents();
 
-  // add_node(head->prev, "name[0]", 12, __LINE__);
-  // add_node(head->prev, "name[1]", 10, __LINE__);
-  // add_node(head->prev, "temp", 9, __LINE__);
-  // print_contents();
-  //
-  // current = find_array_name("name[6]", CREATE_PERMISSION, !PRINT_REPORT);
-  // print_contents();
+  add_node(head->prev, "name[0]", 12, __LINE__);
+  add_node(head->prev, "name[1]", 10, __LINE__);
+  add_node(head->prev, "temp", 9, __LINE__);
+  print_contents();
+
+
+  modify_node("name[6]", 5, !PRINT_REPORT);
+
+  print_contents();
+
+  printf("%s = %d\n", "name[6]", read_node("name[6]", !PRINT_REPORT));
+
+  print_contents();
+
   // current = find_array_name("name[2]", CREATE_PERMISSION, PRINT_REPORT);
   // print_contents();
 
-  for(i = 0; i < 3; i++){
-    printf("Enter int to modify: ");
-    scanf("%9s %d", temp, &value);
-
-    modify_node(temp, value, PRINT_REPORT);
-    print_contents();
-  }
+  // for(i = 0; i < 3; i++){
+  //   printf("Enter int to modify: ");
+  //   scanf("%9s %d", temp, &value);
+  //
+  //   modify_node(temp, value, PRINT_REPORT);
+  //   print_contents();
+  // }
 
   destroy_list(head);
 
