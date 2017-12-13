@@ -33,8 +33,6 @@ const char *colors[] = {"red", "blue"};
  * The car blocks when the bridge is full, when cars of the other color are on bridge
  * or when cars of the other color have been waiting for a very long time.
  *
- * Since the synchronization is made with bsem the very first car that is
- * unblocked has to unblock the others behind him.
  */
 void bridge_enter(int my_color){
 
@@ -44,14 +42,14 @@ void bridge_enter(int my_color){
         if(carsPassing[my_color] == -1){ \
           carsPassing[my_color] = 0; \
         } \
-        carsPassing[my_color]++; \
+        carsPassing[my_color]++; /*starts counting how many same-colored cars pass while other color waits*/ \
       } \
       waiting[my_color]++; \
   );
 
   CCR_EXEC(X, \
     /* When */ (onbridge[!my_color] == 0 && (onbridge[my_color] < bridgeCapacity) && carsPassing[my_color] <= MAX_PASSING), \
-      if(carsPassing[!my_color] >= 0){ \
+      if(carsPassing[!my_color] >= 0){ /*first of my color solving starvation*/ \
         carsPassing[!my_color] = -1; \
       } \
       onbridge[my_color]++; \
@@ -125,7 +123,6 @@ void read_car_args(int *args, int *nofred, int *nofblue){
     printf("something went HORRIBLY wrong: input not suitable\n");
     exit(1);
   }
-  //printf("car color: %c, bridge_time: %d\n", car_color, bridge_time);
 }
 
 //auxiliary function

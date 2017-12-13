@@ -17,15 +17,15 @@
                                     mtx_lock(&mtx_q##label, __LINE__); \
                                     while (!cond){ \
                                       no_q##label++; \
-                                      if(count_loop##label >= 0){ \
+                                      if(count_loop##label >= 0){ /*sb woke him up. Not the first time in while*/ \
                                         count_loop##label++; \
                                         \
                                         if(count_loop##label == no_q##label){ \
-                                          count_loop##label = -1; \
+                                          count_loop##label = -1; /* completed a full circle. Give mtx to newcomers*/ \
                                           mtx_unlock(&mtx##label, __LINE__); \
                                         } \
                                         else{ \
-                                          no_q##label--; cond_signal(&queue##label, __LINE__); \
+                                          no_q##label--; cond_signal(&queue##label, __LINE__); /*wake up next in queue*/ \
                                         } \
                                       } \
                                       else{ \
@@ -37,11 +37,11 @@
                                     body \
                                     \
                                     if(no_q##label > 0){ \
-                                      count_loop##label = 0; \
+                                      count_loop##label = 0; /*initialise loop counter*/ \
                                       no_q##label--; \
-                                      cond_signal(&queue##label, __LINE__); \
+                                      cond_signal(&queue##label, __LINE__); /*wake up next in queue*/ \
                                     } \
-                                    else{ \
+                                    else{ /*no one waiting in queue*/ \
                                       count_loop##label = -1; \
                                       mtx_unlock(&mtx##label, __LINE__); \
                                     } \

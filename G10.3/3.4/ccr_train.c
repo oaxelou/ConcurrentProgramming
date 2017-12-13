@@ -8,7 +8,7 @@
  *
  * The program never terminates because the train never stops.
  */
-//#include "my_sema.h"
+
 #include "ccr.h"
 
 CCR_DECLARE(X);
@@ -25,10 +25,6 @@ volatile int trainCapacity;
  *
  * If there are enough passangers for the train to start, they notify the train
  * and then the train allows them to enter.
- *
- * Since the synchronization is made with bsem the very first passenger that enters
- * the train has to unblock the others behind him.
- *
  * The last passenger that enters notifies the train to begin the ride.
  */
 void train_enter(){
@@ -112,8 +108,6 @@ void *train(void *args){
       /* When */  train_start, \
       train_start = 0; \
     );
-
-    printf("after wait train start\n");
 
     sleep(RIDE_DURATION);
 
