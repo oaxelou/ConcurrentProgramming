@@ -98,10 +98,10 @@ void discard_spaces(int fd, char input_buffer[], int w_nline){
     if ((w_nline == BLOCK_N_LINE_CHAR || w_nline == SEARCH_FOR_N_LINE) && input_buffer[0] == '\n') {
       break;
     }
-    printf("input_buffer[0] = %c\n", input_buffer[0]);
+  //  printf("input_buffer[0] = %c\n", input_buffer[0]);
   }while(input_buffer[0] == ' ' || input_buffer[0] == '\n');
 
-  printf("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n");
+  //printf("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n");
 
   if(w_nline == BLOCK_N_LINE_CHAR){
     if(input_buffer[0] == '\n'){
@@ -122,7 +122,7 @@ int read_island(int fd, char input_buffer[]){
       fprintf(stderr, "Syntax error: Hasn't reached eoline and nothing to read. Terminating.\n");
       exit(1);
     }
-    printf("input_buffer[i = %d] = %c\n", i, input_buffer[i]);
+    // printf("input_buffer[i = %d] = %c\n", i, input_buffer[i]);
   }while(input_buffer[i] != ' ' && input_buffer[i] != '\n');
 
   return i;
@@ -262,64 +262,60 @@ int main(int argc,char *argv[]){
       // printf("input_buffer = %s\n", input_buffer + 1);
 
       /***************************** VARVAL ***********************************/
-      if(temp_char == ' '){
-        discard_spaces(fd, input_buffer, SEARCH_FOR_N_LINE);
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
       }
-      else if(temp_char == '\n'){
-      }
-      else{
-        fprintf(stderr, "sth terribly wrong\n");
-        exit(1);
-      }
+      printf(ANSI_COLOR_BLUE"%s %s "ANSI_COLOR_RESET, command, printString);
 
-      if(temp_char == '\n' || input_buffer[0] == '\n'){
-        if(labelGiven){
-          printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
-        }
-        printf(ANSI_COLOR_BLUE"%s %s"ANSI_COLOR_RESET"\n", command, printString);
-        continue;
-      }
       // printf("input_buffer = %s\n");
-      if(isdigit(input_buffer[0])){
-        i = read_island(fd, input_buffer);
 
-        temp_char = input_buffer[i];
-        input_buffer[i] = '\0';
-        j = 1;
-        while(input_buffer[j] != '\0'){
-          if(isdigit(input_buffer[j]) == 0){
-            fprintf(stderr, "Syntax error: expected a value\n");
-            exit(1);
+      while (temp_char != '\n'){
+        if(temp_char == ' '){
+          discard_spaces(fd, input_buffer, SEARCH_FOR_N_LINE);
+        }
+        else{
+          fprintf(stderr, "sth terribly wrong\n");
+          exit(1);
+        }
+        if(isdigit(input_buffer[0])){
+          i = read_island(fd, input_buffer);
+
+          temp_char = input_buffer[i];
+          input_buffer[i] = '\0';
+          j = 1;
+          while(input_buffer[j] != '\0'){
+            if(isdigit(input_buffer[j]) == 0){
+              fprintf(stderr, "Syntax error: expected a value\n");
+              exit(1);
+            }
+            j++;
           }
-          j++;
+          printVal = atoi(input_buffer);
+
+          printf(ANSI_COLOR_BLUE"%d "ANSI_COLOR_RESET, printVal);
+
+          printf("got in here\n");
         }
-        printVal = atoi(input_buffer);
+        else if(input_buffer[0] == '$'){
+          i = read_island(fd, input_buffer);
 
-        if(labelGiven){
-          printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+          temp_char = input_buffer[i];
+          input_buffer[i] = '\0';
+
+          //elegxos gia to ti metavlhth einai
+          //elegxos gia to an uparxei h metablhth (NO CREATE_PERMISSION)
+          printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET,input_buffer);
+          discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+
         }
-        printf(ANSI_COLOR_BLUE"%s %s %d"ANSI_COLOR_RESET"\n", command, printString, printVal);
-        continue;
-      }
-      else if(input_buffer[0] == '$'){
-        i = read_island(fd, input_buffer);
-
-        temp_char = input_buffer[i];
-        input_buffer[i] = '\0';
-
-        //elegxos gia to ti metavlhth einai
-        //elegxos gia to an uparxei h metablhth (NO CREATE_PERMISSION)
-        if(labelGiven){
-          printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+        else{
+          fprintf(stderr, "Syntax error: Not a varval\n");
+          exit(1);
         }
-        printf(ANSI_COLOR_BLUE"%s %s %s"ANSI_COLOR_RESET"\n", command, printString, input_buffer);
-        continue;
-      }
-      else{
-        fprintf(stderr, "Syntax error: Not a varval\n");
-        exit(1);
-      }
 
+      }
+      printf("\n");
+      continue;
       // $temp[$temp1[$var[...]]]
     }
     else if(command_group == 1){ // LOAD
