@@ -132,7 +132,9 @@ int read_island(int fd, char input_buffer[]){
 }
 
 int check_varval(int fd, char input_buffer[], char *temp_char){
-  int i, j, printVal;
+  int i, j, printVal, printVar = 0;
+  char* pos, *pos_temp;
+  int ext_array_pos;
 
   if(isdigit(input_buffer[0])){
     i = read_island(fd, input_buffer);
@@ -158,16 +160,51 @@ int check_varval(int fd, char input_buffer[], char *temp_char){
     *temp_char = input_buffer[i];
     input_buffer[i] = '\0';
 
-    //elegxos gia to ti metavlhth einai
-    //elegxos gia to an uparxei h metablhth (NO CREATE_PERMISSION)
-    printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET,input_buffer);
+    fprintf(stderr,"var given: %s\n", input_buffer);
 
+    //check that first char is a letter
+    if(isalpha(input_buffer[1]) == 0){
+      fprintf(stderr, "Syntax error. Not right name of variable\n");
+      exit(1);
+    }
+
+    //check if array
+    pos_temp = strchr(input_buffer, '[');
+    if(pos_temp == NULL){
+      printf("%s: simple var\n", input_buffer);
+      // printVar = read value !CREATE_PERMISSION
+    }
+    else{
+      // check if double array
+      pos = input_buffer + 1;
+      pos_temp = strchr(pos, '$');
+      if(pos_temp == NULL){
+        printf("%s: simple array\n", input_buffer);
+        // printVar = read value !CREATE_PERMISSION
+      }
+      else{
+        pos = pos_temp + 1;
+        input_buffer[strlen(input_buffer) - 1] = '\0';
+        printf("if $%s = 8\n", pos);
+        ext_array_pos = 8; // read value; !CREATE_PERMISSION
+        pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
+        sprintf(pos, "%d", ext_array_pos);
+
+        strcpy(pos_temp, pos);
+        strcat(pos_temp, "]");
+
+        printf("double array became: %s\n", input_buffer);
+        free(pos);
+        // printVar = read !CREATE_PERMISSION
+      }
+    }
+    printf(ANSI_COLOR_BLUE"(string)%s "ANSI_COLOR_RESET,input_buffer);
+    return printVar;
   }
   else{
     fprintf(stderr, "Syntax error: Not a varval\n");
     exit(1);
   }
-  return 0;
 }
 
 /******************************************************************************/
@@ -328,83 +365,8 @@ int main(int argc,char *argv[]){
 
         fprintf(stderr, "input_buffer[0] = %c\n", input_buffer[0]);
         /************************* IN A FUNCTION ******************************/
+        check_varval( fd, input_buffer, &temp_char);
 
-        if(isdigit(input_buffer[0])){
-          i = read_island(fd, input_buffer);
-
-          temp_char = input_buffer[i];
-          input_buffer[i] = '\0';
-          j = 1;
-          while(input_buffer[j] != '\0'){
-            if(isdigit(input_buffer[j]) == 0){
-              fprintf(stderr, "Syntax error: expected a value\n");
-              exit(1);
-            }
-            j++;
-          }
-          printVal = atoi(input_buffer);
-
-          printf(ANSI_COLOR_BLUE"%d "ANSI_COLOR_RESET, printVal);
-        }
-        else if(input_buffer[0] == '$'){
-          i = read_island(fd, input_buffer);
-
-          temp_char = input_buffer[i];
-          input_buffer[i] = '\0';
-
-          fprintf(stderr,"var given: %s\n", input_buffer);
-
-          //check that first char is a letter
-          if(isalpha(input_buffer[1]) == 0){
-            fprintf(stderr, "Syntax error. Not right name of variable\n");
-            exit(1);
-          }
-
-          char* pos, *pos_temp;
-          int ext_array_pos;
-          //check if array
-          pos_temp = strchr(input_buffer, '[');
-          if(pos_temp == NULL){
-            printf("%s: simple var\n", input_buffer);
-            // read value
-          }
-          else{
-            // check if double array
-            pos = input_buffer + 1;
-            pos_temp = strchr(pos, '$');
-            if(pos_temp == NULL){
-              printf("%s: simple array\n", input_buffer);
-              // read value
-            }
-            else{
-              pos = pos_temp + 1;
-              input_buffer[strlen(input_buffer) - 1] = '\0';
-              printf("if $%s = 8\n", pos);
-              ext_array_pos = 8; // read value;
-              pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
-              sprintf(pos, "%d", ext_array_pos);
-
-              strcpy(pos_temp, pos);
-              strcat(pos_temp, "]");
-
-              // read value
-              printf("double array became: %s\n", input_buffer);
-              //free
-            }
-
-          }
-
-
-
-          //elegxos gia to ti metavlhth einai
-          //elegxos gia to an uparxei h metablhth (NO CREATE_PERMISSION)
-          printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET,input_buffer);
-
-        }
-        else{
-          fprintf(stderr, "Syntax error: Not a varval\n");
-          exit(1);
-        }
         /************************ </IN A FUNCTION> ****************************/
 
       }
