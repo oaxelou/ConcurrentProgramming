@@ -259,6 +259,7 @@ int main(int argc,char *argv[]){
       input_buffer[i - 1] = '\0';
 
       strcpy(printString, input_buffer + 1);
+      printf("printString = %s\n", printString);
       // printf("input_buffer = %s\n", input_buffer + 1);
 
       /***************************** VARVAL ***********************************/
@@ -272,11 +273,16 @@ int main(int argc,char *argv[]){
       while (temp_char != '\n'){
         if(temp_char == ' '){
           discard_spaces(fd, input_buffer, SEARCH_FOR_N_LINE);
+          if(input_buffer[0] == '\n'){
+            printf("\n");break;
+          }
         }
         else{
           fprintf(stderr, "sth terribly wrong\n");
           exit(1);
         }
+
+        fprintf(stderr, "input_buffer[0] = %c\n", input_buffer[0]);
         if(isdigit(input_buffer[0])){
           i = read_island(fd, input_buffer);
 
@@ -293,8 +299,6 @@ int main(int argc,char *argv[]){
           printVal = atoi(input_buffer);
 
           printf(ANSI_COLOR_BLUE"%d "ANSI_COLOR_RESET, printVal);
-
-          printf("got in here\n");
         }
         else if(input_buffer[0] == '$'){
           i = read_island(fd, input_buffer);
