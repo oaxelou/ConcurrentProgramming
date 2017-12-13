@@ -6,9 +6,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <math.h>
 
 #define COMMAND_SIZE 7
-#define LABEL_SIZE 20
+#define LABEL_SIZE 100
 
 #define ALLOW_N_LINE_CHAR 0
 #define BLOCK_N_LINE_CHAR 1
@@ -21,6 +22,8 @@
 #define ANSI_COLOR_MAGENTA "\x1b[35m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
+
+#define NODIGITS(x) x>0?((int)floor(log10((double)abs(x))) + 1):1
 
 /*
  * returns number of group of the command if it's a command
@@ -128,8 +131,49 @@ int read_island(int fd, char input_buffer[]){
   return i;
 }
 
+int check_varval(int fd, char input_buffer[], char *temp_char){
+  int i, j, printVal;
+
+  if(isdigit(input_buffer[0])){
+    i = read_island(fd, input_buffer);
+
+    *temp_char = input_buffer[i];
+    input_buffer[i] = '\0';
+    j = 1;
+    while(input_buffer[j] != '\0'){
+      if(isdigit(input_buffer[j]) == 0){
+        fprintf(stderr, "Syntax error: expected a value\n");
+        exit(1);
+      }
+      j++;
+    }
+    printVal = atoi(input_buffer);
+
+    printf(ANSI_COLOR_BLUE"%d "ANSI_COLOR_RESET, printVal);
+    return printVal;
+  }
+  else if(input_buffer[0] == '$'){
+    i = read_island(fd, input_buffer);
+
+    *temp_char = input_buffer[i];
+    input_buffer[i] = '\0';
+
+    //elegxos gia to ti metavlhth einai
+    //elegxos gia to an uparxei h metablhth (NO CREATE_PERMISSION)
+    printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET,input_buffer);
+
+  }
+  else{
+    fprintf(stderr, "Syntax error: Not a varval\n");
+    exit(1);
+  }
+  return 0;
+}
+
+/******************************************************************************/
+
 int main(int argc,char *argv[]){
-  int fd, i, j, labelGiven, command_group, printVal, printVar;
+  int fd, i, j, labelGiven, command_group, printVal/*, printVar*/;
   char input_buffer[(LABEL_SIZE > COMMAND_SIZE ? LABEL_SIZE : COMMAND_SIZE)] = "";
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
   char printString[LABEL_SIZE];
@@ -283,6 +327,8 @@ int main(int argc,char *argv[]){
         }
 
         fprintf(stderr, "input_buffer[0] = %c\n", input_buffer[0]);
+        /************************* IN A FUNCTION ******************************/
+
         if(isdigit(input_buffer[0])){
           i = read_island(fd, input_buffer);
 
@@ -306,6 +352,50 @@ int main(int argc,char *argv[]){
           temp_char = input_buffer[i];
           input_buffer[i] = '\0';
 
+          fprintf(stderr,"var given: %s\n", input_buffer);
+
+          //check that first char is a letter
+          if(isalpha(input_buffer[1]) == 0){
+            fprintf(stderr, "Syntax error. Not right name of variable\n");
+            exit(1);
+          }
+
+          char* pos, *pos_temp;
+          int ext_array_pos;
+          //check if array
+          pos_temp = strchr(input_buffer, '[');
+          if(pos_temp == NULL){
+            printf("%s: simple var\n", input_buffer);
+            // read value
+          }
+          else{
+            // check if double array
+            pos = input_buffer + 1;
+            pos_temp = strchr(pos, '$');
+            if(pos_temp == NULL){
+              printf("%s: simple array\n", input_buffer);
+              // read value
+            }
+            else{
+              pos = pos_temp + 1;
+              input_buffer[strlen(input_buffer) - 1] = '\0';
+              printf("if $%s = 8\n", pos);
+              ext_array_pos = 8; // read value;
+              pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
+              sprintf(pos, "%d", ext_array_pos);
+
+              strcpy(pos_temp, pos);
+              strcat(pos_temp, "]");
+
+              // read value
+              printf("double array became: %s\n", input_buffer);
+              //free
+            }
+
+          }
+
+
+
           //elegxos gia to ti metavlhth einai
           //elegxos gia to an uparxei h metablhth (NO CREATE_PERMISSION)
           printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET,input_buffer);
@@ -315,6 +405,7 @@ int main(int argc,char *argv[]){
           fprintf(stderr, "Syntax error: Not a varval\n");
           exit(1);
         }
+        /************************ </IN A FUNCTION> ****************************/
 
       }
       printf("\n");
