@@ -210,7 +210,7 @@ int check_varval(int fd, char input_buffer[], char *temp_char){
 /******************************************************************************/
 
 int main(int argc,char *argv[]){
-  int fd, i, j, labelGiven, command_group, printVal/*, printVar*/;
+  int fd, i, labelGiven, command_group;
   char input_buffer[(LABEL_SIZE > COMMAND_SIZE ? LABEL_SIZE : COMMAND_SIZE)] = "";
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
   char printString[LABEL_SIZE];
@@ -329,19 +329,34 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      i = read_island(fd, input_buffer);
+      // i = read_island(fd, input_buffer);
+      i = 0;
+      char byte_read;
+      do{
+        i++;
+        byte_read = my_read(fd, input_buffer + i, __LINE__);
+        if(byte_read == 0){
+          fprintf(stderr, "Syntax error: Hasn't reached eoline and nothing to read. Terminating.\n");
+          exit(1);
+        }
+      }while(input_buffer[i] != '"');
 
       temp_char = input_buffer[i];
       input_buffer[i] = '\0';
-      if(input_buffer[i - 1] != '"'){
+      if(temp_char != '"'){
         fprintf(stderr, "Syntax error: Expected ending quotes for string.\n");
         exit(1);
       }
-      input_buffer[i - 1] = '\0';
 
       strcpy(printString, input_buffer + 1);
       printf("printString = %s\n", printString);
       // printf("input_buffer = %s\n", input_buffer + 1);
+
+      byte_read = my_read(fd, &temp_char, __LINE__);
+      if(byte_read == 0){
+        fprintf(stderr, "Syntax error: Hasn't reached eoline and nothing to read. Terminating.\n");
+        exit(1);
+      }
 
       /***************************** VARVAL ***********************************/
       if(labelGiven){
