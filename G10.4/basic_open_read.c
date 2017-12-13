@@ -305,7 +305,6 @@ int main(int argc,char *argv[]){
           //elegxos gia to ti metavlhth einai
           //elegxos gia to an uparxei h metablhth (NO CREATE_PERMISSION)
           printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET,input_buffer);
-          discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
 
         }
         else{
