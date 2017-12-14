@@ -128,7 +128,7 @@ int read_island(int fd, char input_buffer[]){
 int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char){
   int i, j, printVal, printVar = 0;
   char* pos, *pos_temp;
-  int ext_array_pos;
+  // int ext_array_pos;
 
   if(isdigit(input_buffer[0])){
     i = read_island(fd, input_buffer);
@@ -162,35 +162,36 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
       exit(1);
     }
 
-    //check if array
     pos_temp = strchr(input_buffer, '[');
+    //check if variable
     if(pos_temp == NULL){
       printf("%s: simple var\n", input_buffer);
-      printVar = read_node(locals, input_buffer + 1, PRINT_REPORT);
+      printVar = read_node(locals, input_buffer, PRINT_REPORT);
     }
     else{
-      // check if double array
       pos = input_buffer + 1;
       pos_temp = strchr(pos, '$');
+      // check if array
       if(pos_temp == NULL){
         printf("%s: simple array\n", input_buffer);
-        // printVar = read_node(locals, input_buffer, PRINT_REPORT);
+        printVar = read_node(locals, input_buffer, PRINT_REPORT);
       }
-      else{
-        pos = pos_temp + 1;
-        input_buffer[strlen(input_buffer) - 1] = '\0';
-        printf("if $%s = 8\n", pos);
-        ext_array_pos = 8; // read value; !CREATE_PERMISSION
-        pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
-        sprintf(pos, "%d", ext_array_pos);
-
-        strcpy(pos_temp, pos);
-        strcat(pos_temp, "]");
-
-        printf("double array became: %s\n", input_buffer);
-        free(pos);
-        // printVar = read !CREATE_PERMISSION
-      }
+      // else{
+      //   pos = pos_temp + 1;
+      //   input_buffer[strlen(input_buffer) - 1] = '\0';
+      //   //printf("if $%s = 8\n", pos);
+      //   //ext_array_pos = 8; // read value; !CREATE_PERMISSION
+      //   printVar = read_node(locals, input_buffer, PRINT_REPORT);
+      //   pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
+      //   sprintf(pos, "%d", ext_array_pos);
+      //
+      //   strcpy(pos_temp, pos);
+      //   strcat(pos_temp, "]");
+      //
+      //   printf("double array became: %s\n", input_buffer);
+      //   free(pos);
+      //   // printVar = read !CREATE_PERMISSION
+      // }
     }
     printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
     return printVar;
@@ -198,6 +199,68 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
   else{
     fprintf(stderr, "Syntax error: Not a varval\n");
     exit(1);
+  }
+}
+
+void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*, int operation_result*/){
+  int i;
+  char* pos, *pos_temp;
+
+  if(input_buffer[0] == '$'){
+    i = read_island(fd, input_buffer);
+
+    *temp_char = input_buffer[i];
+    input_buffer[i] = '\0';
+
+    fprintf(stderr,"var given: %s\n", input_buffer);
+
+    //check that first char is a letter
+    if(isalpha(input_buffer[1]) == 0){
+      fprintf(stderr, "Syntax error. Not right name of variable\n");
+      exit(1);
+    }
+
+    pos_temp = strchr(input_buffer, '[');
+    //check if variable
+    if(pos_temp == NULL){
+      printf("%s: simple var\n", input_buffer);
+      if (modify_node(locals, input_buffer, 0/*operation_result*/ ,PRINT_REPORT)){
+        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        exit(1);
+      }
+    }
+    else{
+      pos = input_buffer + 1;
+      pos_temp = strchr(pos, '$');
+      // check if array
+      if(pos_temp == NULL){
+        printf("%s: simple array\n", input_buffer);
+        if (modify_node(locals, input_buffer, 0/*operation_result*/ ,PRINT_REPORT)){
+          fprintf(stderr, "Error with modify_node (should never appear)\n");
+          exit(1);
+        }
+      }
+      // else{
+      //   pos = pos_temp + 1;
+      //   input_buffer[strlen(input_buffer) - 1] = '\0';
+      //   printf("if $%s = 8\n", pos);
+      //   ext_array_pos = 8; // read value; !CREATE_PERMISSION
+      //   printVar = read_node(locals, input_buffer + 1, PRINT_REPORT);
+      //   pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
+      //   sprintf(pos, "%d", ext_array_pos);
+      //
+      //   strcpy(pos_temp, pos);
+      //   strcat(pos_temp, "]");
+      //
+      //   printf("double array became: %s\n", input_buffer);
+      //   free(pos);
+      //   if (modify_node(locals, input_buffer + 1, 0/*operation_result*/ ,PRINT_REPORT)){
+      //     fprintf(stderr, "Error with modify_node (should never appear)\n");
+      //     exit(1);
+      //   }
+      // }
+    }
+    // printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
   }
 }
 
@@ -213,10 +276,10 @@ int main(int argc,char *argv[]){
 
   locals = init_list();
 
-  add_node(locals, locals->prev, "temp", 2);
+  add_node(locals, locals->prev, "$temp", 2);
   print_contents(locals);
-  // add_node(locals, locals->prev, "array[2]", 7);
-  modify_node(locals, "array[2]", 7, !PRINT_REPORT);
+  // add_node(locals, locals->prev, "$array[2]", 7);
+  modify_node(locals, "$array[2]", 7, !PRINT_REPORT);
   print_contents(locals);
   printf("\n\nPress enter to continue: "); getchar();
 
@@ -392,7 +455,6 @@ int main(int argc,char *argv[]){
       }
       printf("\n");
       continue;
-      // $temp[$temp1[$var[...]]]
     }
     else if(command_group == 1){ // LOAD
       //Perimenei Var kai GlobalVar
