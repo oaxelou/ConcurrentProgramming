@@ -128,7 +128,7 @@ int read_island(int fd, char input_buffer[]){
 int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char){
   int i, j, printVal, printVar = 0;
   char* pos, *pos_temp;
-  // int ext_array_pos;
+  int ext_array_pos;
 
   if(isdigit(input_buffer[0])){
     i = read_island(fd, input_buffer);
@@ -176,22 +176,23 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
         printf("%s: simple array\n", input_buffer);
         printVar = read_node(locals, input_buffer, PRINT_REPORT);
       }
-      // else{
-      //   pos = pos_temp + 1;
-      //   input_buffer[strlen(input_buffer) - 1] = '\0';
-      //   //printf("if $%s = 8\n", pos);
-      //   //ext_array_pos = 8; // read value; !CREATE_PERMISSION
-      //   printVar = read_node(locals, input_buffer, PRINT_REPORT);
-      //   pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
-      //   sprintf(pos, "%d", ext_array_pos);
-      //
-      //   strcpy(pos_temp, pos);
-      //   strcat(pos_temp, "]");
-      //
-      //   printf("double array became: %s\n", input_buffer);
-      //   free(pos);
-      //   // printVar = read !CREATE_PERMISSION
-      // }
+      else{
+        pos = pos_temp + 1;
+        input_buffer[strlen(input_buffer) - 1] = '\0';
+        printf("if %s = 8\n", pos - 1);
+
+        ext_array_pos = read_node(locals, pos - 1, PRINT_REPORT); // read value; !CREATE_PERMISSION
+        pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
+        sprintf(pos, "%d", ext_array_pos);
+
+        strcpy(pos_temp, pos);
+        strcat(pos_temp, "]");
+
+        printf("double array became: %s\n", input_buffer);
+        free(pos);
+        printVar = read_node(locals, input_buffer, PRINT_REPORT);
+
+      }
     }
     printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
     return printVar;
