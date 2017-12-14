@@ -194,7 +194,7 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
 
       }
     }
-    printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
+    printf(ANSI_COLOR_BLUE"(string)%s (int)%d\n"ANSI_COLOR_RESET,input_buffer, printVar);
     return printVar;
   }
   else{
@@ -256,6 +256,69 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
     }
     // printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
   }
+  else{
+    fprintf(stderr, "check_var: Syntax error: expected $\n");
+    exit(1);
+  }
+}
+
+int check_varGlobal(int fd, localVar *globals, char input_buffer[], char *temp_char /*, int operation_result*/){
+  int i, ext_array_pos;
+  char* pos, *pos_temp;
+
+  if(input_buffer[0] == '$'){
+    i = read_island(fd, input_buffer);
+
+    *temp_char = input_buffer[i];
+    input_buffer[i] = '\0';
+
+    fprintf(stderr,"var given: %s\n", input_buffer);
+
+    // printf("===%s\n", input_buffer);
+    //check that first char is a letter
+    if(isalpha(input_buffer[1]) == 0){
+      // printf("===%s\n", input_buffer+1);
+      fprintf(stderr, "check_varGlobal: Syntax error. Not right name of variable\n");
+      exit(1);
+    }
+
+    pos_temp = strchr(input_buffer, '[');
+    //check if variable
+    if(pos_temp == NULL){
+      printf("%s: simple var\n", input_buffer);
+      return read_node(globals, input_buffer, PRINT_REPORT);
+    }
+    else{
+      pos = input_buffer + 1;
+      pos_temp = strchr(pos, '$');
+      // check if array
+      if(pos_temp == NULL){
+        printf("%s: simple array\n", input_buffer);
+        return read_node(globals, input_buffer, PRINT_REPORT);
+      }
+      else{
+        pos = pos_temp + 1;
+        input_buffer[strlen(input_buffer) - 1] = '\0';
+        printf("if $%s = 8\n", pos);
+
+        ext_array_pos = read_node(globals, pos - 1, PRINT_REPORT);
+        pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
+        sprintf(pos, "%d", ext_array_pos);
+
+        strcpy(pos_temp, pos);
+        strcat(pos_temp, "]");
+
+        printf("Global: array became: %s\n", input_buffer);
+        free(pos);
+        return read_node(globals, input_buffer, PRINT_REPORT);
+      }
+    }
+    // printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
+  }
+  else{
+    fprintf(stderr, "check_var: Syntax error: expected $\n");
+    exit(1);
+  }
 }
 
 /******************************************************************************/
@@ -268,15 +331,12 @@ int main(int argc,char *argv[]){
   char printString[LABEL_SIZE];
 
   localVar *locals;
+  localVar *globals;
 
   locals = init_list();
+  globals = init_list();
 
-  add_node(locals, locals->prev, "$temp", 2);
-  print_contents(locals);
-  // add_node(locals, locals->prev, "$array[2]", 7);
-  modify_node(locals, "$array[2]", 7, !PRINT_REPORT);
-  print_contents(locals);
-  printf("\n\nPress enter to continue: "); getchar();
+  add_node(globals, globals->prev, "$first_global", 7);
 
   // pare ta args
   if(argc < 2){
@@ -453,9 +513,98 @@ int main(int argc,char *argv[]){
     }
     else if(command_group == 1){ // LOAD
       //Perimenei Var kai GlobalVar
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, command);
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      var_op[0] = input_buffer[0];
+      check_var(fd, locals, var_op, &temp_char);
+
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      varval1_op[0] = input_buffer[0];
+
+      varval1 = check_varGlobal(fd, globals, varval1_op, &temp_char);
+      fprintf(stderr, "varval1 = %d\n", varval1);
+
+      if (modify_node(locals, var_op, varval1, !PRINT_REPORT)){
+        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        exit(1);
+      }
     }
     else if(command_group == 2){ // STORE
       //Perimenei GlobalVar kai Var
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, command);
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      var_op[0] = input_buffer[0];
+      check_var(fd, globals, var_op, &temp_char);
+
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      varval1_op[0] = input_buffer[0];
+
+      varval1 = check_varval(fd, locals, varval1_op, &temp_char);
+      fprintf(stderr, "varval1 = %d\n", varval1);
+
+      if (modify_node(globals, var_op, varval1, !PRINT_REPORT)){
+        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        exit(1);
+      }
     }
     else if(command_group == 3){ // SET
       //Perimenei Var kai VarVal
@@ -637,8 +786,10 @@ int main(int argc,char *argv[]){
     }
 
     //edw ftanei (AKA h teleutaia trypa ths flogeras)
-
+    printf("locals:\n");
     print_contents(locals);
+    printf("globals:\n");
+    print_contents(globals);
   }
 
   //
