@@ -1,4 +1,4 @@
-#include <var_storage.h>
+#include "var_storage.h"
 
 void destroy_list(localVar *head, int print_flag){
   localVar *current = head->next->next;
@@ -23,11 +23,11 @@ void abort_function(localVar *head){
 }
 
 //initialises a list
-localVar* init_list(int line){
+localVar* init_list(){
   localVar *head;
   head = (localVar*)malloc(sizeof(localVar));
 	if (head == NULL){
-		printf("error with malloc in init_list at line: %d\n", line);
+		printf("error with malloc in init_list\n");
 		exit(1);
 	}
 

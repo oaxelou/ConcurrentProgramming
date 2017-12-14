@@ -27,6 +27,7 @@ typedef volatile struct localVariable{
 
 void destroy_list(localVar *head, int print_flag);
 void abort_function(localVar *head);
+localVar* init_list();
 void print_contents(localVar *head);
 
 localVar* add_node(localVar *head, localVar *current, char *new_name, int new_value);
