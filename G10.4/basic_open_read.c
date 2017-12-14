@@ -204,7 +204,7 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
 }
 
 void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*, int operation_result*/){
-  int i;
+  int i, ext_array_pos;
   char* pos, *pos_temp;
 
   if(input_buffer[0] == '$'){
@@ -215,9 +215,11 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
 
     fprintf(stderr,"var given: %s\n", input_buffer);
 
+    // printf("===%s\n", input_buffer);
     //check that first char is a letter
     if(isalpha(input_buffer[1]) == 0){
-      fprintf(stderr, "Syntax error. Not right name of variable\n");
+      // printf("===%s\n", input_buffer+1);
+      fprintf(stderr, "check_var: Syntax error. Not right name of variable\n");
       exit(1);
     }
 
@@ -225,10 +227,7 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
     //check if variable
     if(pos_temp == NULL){
       printf("%s: simple var\n", input_buffer);
-      if (modify_node(locals, input_buffer, 0/*operation_result*/ ,PRINT_REPORT)){
-        fprintf(stderr, "Error with modify_node (should never appear)\n");
-        exit(1);
-      }
+      // EDW HTAN TO modify_node
     }
     else{
       pos = input_buffer + 1;
@@ -236,30 +235,24 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
       // check if array
       if(pos_temp == NULL){
         printf("%s: simple array\n", input_buffer);
-        if (modify_node(locals, input_buffer, 0/*operation_result*/ ,PRINT_REPORT)){
-          fprintf(stderr, "Error with modify_node (should never appear)\n");
-          exit(1);
-        }
+        // EDW HTAN TO modify_node
       }
-      // else{
-      //   pos = pos_temp + 1;
-      //   input_buffer[strlen(input_buffer) - 1] = '\0';
-      //   printf("if $%s = 8\n", pos);
-      //   ext_array_pos = 8; // read value; !CREATE_PERMISSION
-      //   printVar = read_node(locals, input_buffer + 1, PRINT_REPORT);
-      //   pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
-      //   sprintf(pos, "%d", ext_array_pos);
-      //
-      //   strcpy(pos_temp, pos);
-      //   strcat(pos_temp, "]");
-      //
-      //   printf("double array became: %s\n", input_buffer);
-      //   free(pos);
-      //   if (modify_node(locals, input_buffer + 1, 0/*operation_result*/ ,PRINT_REPORT)){
-      //     fprintf(stderr, "Error with modify_node (should never appear)\n");
-      //     exit(1);
-      //   }
-      // }
+      else{
+        pos = pos_temp + 1;
+        input_buffer[strlen(input_buffer) - 1] = '\0';
+        printf("if $%s = 8\n", pos);
+
+        ext_array_pos = read_node(locals, pos - 1, PRINT_REPORT);
+        pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
+        sprintf(pos, "%d", ext_array_pos);
+
+        strcpy(pos_temp, pos);
+        strcat(pos_temp, "]");
+
+        printf("double array became: %s\n", input_buffer);
+        free(pos);
+        // EDW HTAN TO modify_node
+      }
     }
     // printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
   }
@@ -269,7 +262,8 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
 
 int main(int argc,char *argv[]){
   int fd, i, labelGiven, command_group;
-  char input_buffer[(LABEL_SIZE > COMMAND_SIZE ? LABEL_SIZE : COMMAND_SIZE)] = "";
+  char input_buffer[LABEL_SIZE] = "";
+  char var_op[LABEL_SIZE], varval1_op[LABEL_SIZE], varval2_op[LABEL_SIZE];
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
   char printString[LABEL_SIZE];
 
@@ -465,9 +459,57 @@ int main(int argc,char *argv[]){
     }
     else if(command_group == 3){ // SET
       //Perimenei Var kai VarVal
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, command);
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      var_op[0] = input_buffer[0];
+      check_var(fd, locals, var_op, &temp_char);
+
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      varval1_op[0] = input_buffer[0];
+
+      int timh;
+      timh = check_varval(fd, locals, varval1_op, &temp_char);
+      fprintf(stderr, "timh = %d\n", timh);
+
+      if (modify_node(locals, var_op, timh, !PRINT_REPORT)){
+        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        exit(1);
+      }
+      /************************ </IN A FUNCTION> ****************************/
     }
     else if(command_group == 4){ // ADD, SUB, MUL, DIV, MOD
       //Perimenei Var, VarVal kai VarVal
+
     }
     else if(command_group == 7){ // DOWN, UP
       //Perimenei GlobalVar
@@ -485,6 +527,9 @@ int main(int argc,char *argv[]){
       fprintf(stderr, "EDW DEN PROKEITAI POTE NA FTASEI\n");
     }
 
+    //edw ftanei (AKA h teleutaia trypa ths flogeras)
+
+    print_contents(locals);
   }
 
   //
@@ -499,6 +544,9 @@ int main(int argc,char *argv[]){
   // //it's a command for sure
 
   //den ftanei edw pote alla tha mpei se mia "terminating function"
+
+  print_contents(locals);
+  destroy_list(locals, PRINT_REPORT);
   close(fd);
 
   return 0;
