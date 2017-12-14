@@ -1,3 +1,5 @@
+#include "var_storage.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -14,14 +16,6 @@
 #define ALLOW_N_LINE_CHAR 0
 #define BLOCK_N_LINE_CHAR 1
 #define SEARCH_FOR_N_LINE 2
-
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
 
 #define NODIGITS(x) x>0?((int)floor(log10((double)abs(x))) + 1):1
 
@@ -131,7 +125,7 @@ int read_island(int fd, char input_buffer[]){
   return i;
 }
 
-int check_varval(int fd, char input_buffer[], char *temp_char){
+int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char){
   int i, j, printVal, printVar = 0;
   char* pos, *pos_temp;
   int ext_array_pos;
@@ -172,7 +166,7 @@ int check_varval(int fd, char input_buffer[], char *temp_char){
     pos_temp = strchr(input_buffer, '[');
     if(pos_temp == NULL){
       printf("%s: simple var\n", input_buffer);
-      // printVar = read value !CREATE_PERMISSION
+      printVar = read_node(locals, input_buffer + 1, PRINT_REPORT);
     }
     else{
       // check if double array
@@ -180,7 +174,7 @@ int check_varval(int fd, char input_buffer[], char *temp_char){
       pos_temp = strchr(pos, '$');
       if(pos_temp == NULL){
         printf("%s: simple array\n", input_buffer);
-        // printVar = read value !CREATE_PERMISSION
+        // printVar = read_node(locals, input_buffer, PRINT_REPORT);
       }
       else{
         pos = pos_temp + 1;
@@ -198,7 +192,7 @@ int check_varval(int fd, char input_buffer[], char *temp_char){
         // printVar = read !CREATE_PERMISSION
       }
     }
-    printf(ANSI_COLOR_BLUE"(string)%s "ANSI_COLOR_RESET,input_buffer);
+    printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
     return printVar;
   }
   else{
@@ -214,6 +208,17 @@ int main(int argc,char *argv[]){
   char input_buffer[(LABEL_SIZE > COMMAND_SIZE ? LABEL_SIZE : COMMAND_SIZE)] = "";
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
   char printString[LABEL_SIZE];
+
+  localVar *locals;
+
+  locals = init_list();
+
+  add_node(locals, locals->prev, "temp", 2);
+  print_contents(locals);
+  // add_node(locals, locals->prev, "array[2]", 7);
+  modify_node(locals, "array[2]", 7, !PRINT_REPORT);
+  print_contents(locals);
+  printf("\n\nPress enter to continue: "); getchar();
 
   // pare ta args
   if(argc < 2){
@@ -380,7 +385,7 @@ int main(int argc,char *argv[]){
 
         fprintf(stderr, "input_buffer[0] = %c\n", input_buffer[0]);
         /************************* IN A FUNCTION ******************************/
-        check_varval( fd, input_buffer, &temp_char);
+        check_varval(fd, locals, input_buffer, &temp_char);
 
         /************************ </IN A FUNCTION> ****************************/
 
