@@ -578,7 +578,7 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      fprintf(stderr, "STORE: var = %c\n", input_buffer[0]);
       var_op[0] = input_buffer[0];
       check_var(fd, globals, var_op, &temp_char);
 
@@ -748,6 +748,40 @@ int main(int argc,char *argv[]){
     }
     else if(command_group == 7){ // DOWN, UP
       //Perimenei GlobalVar
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, command);
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      varval1_op[0] = input_buffer[0];
+      varval1 = check_varGlobal(fd, globals, varval1_op, &temp_char);
+
+      if(strcmp(command, "DOWN") == 0){
+        varval1 = varval1 - 1;
+      }
+      else if(strcmp(command, "UP") == 0){
+        varval1 = varval1 + 1;
+      }
+
+      if (modify_node(globals, varval1_op, varval1, !PRINT_REPORT)){
+        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        exit(1);
+      }
+
+
     }
     else if(command_group == 8){ // SLEEP
       //Perimenei VarVal
