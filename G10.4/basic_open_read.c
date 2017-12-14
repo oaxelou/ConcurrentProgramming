@@ -261,7 +261,7 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
 /******************************************************************************/
 
 int main(int argc,char *argv[]){
-  int fd, i, labelGiven, command_group;
+  int fd, i, labelGiven, command_group, varValue, varval1, varval2;
   char input_buffer[LABEL_SIZE] = "";
   char var_op[LABEL_SIZE], varval1_op[LABEL_SIZE], varval2_op[LABEL_SIZE];
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
@@ -497,11 +497,10 @@ int main(int argc,char *argv[]){
       fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
       varval1_op[0] = input_buffer[0];
 
-      int timh;
-      timh = check_varval(fd, locals, varval1_op, &temp_char);
-      fprintf(stderr, "timh = %d\n", timh);
+      varval1 = check_varval(fd, locals, varval1_op, &temp_char);
+      fprintf(stderr, "varval1 = %d\n", varval1);
 
-      if (modify_node(locals, var_op, timh, !PRINT_REPORT)){
+      if (modify_node(locals, var_op, varval1, !PRINT_REPORT)){
         fprintf(stderr, "Error with modify_node (should never appear)\n");
         exit(1);
       }
@@ -510,12 +509,122 @@ int main(int argc,char *argv[]){
     else if(command_group == 4){ // ADD, SUB, MUL, DIV, MOD
       //Perimenei Var, VarVal kai VarVal
 
+      /****************************** VAR *************************************/
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, command);
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      var_op[0] = input_buffer[0];
+      check_var(fd, locals, var_op, &temp_char);
+
+      /**************************** VARVAL1 ***********************************/
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      varval1_op[0] = input_buffer[0];
+
+      varval1 = check_varval(fd, locals, varval1_op, &temp_char);
+      fprintf(stderr, "varval1 = %d\n", varval1);
+
+      /**************************** VARVAL2 ***********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      varval2_op[0] = input_buffer[0];
+
+      varval2 = check_varval(fd, locals, varval2_op, &temp_char);
+      fprintf(stderr, "varval2 = %d\n", varval2);
+
+      // ADD, SUB, MUL, DIV, MOD
+      if(strcmp(command, "ADD") == 0){
+        varValue = varval1 + varval2;
+      }
+      else if(strcmp(command, "SUB") == 0){
+        varValue = varval1 - varval2;
+      }
+      else if(strcmp(command, "MUL") == 0){
+        varValue = varval1 * varval2;
+      }
+      else if(strcmp(command, "DIV") == 0){
+        varValue = varval1 / varval2;
+      }
+      else if(strcmp(command, "MOD") == 0){
+        varValue = varval1 % varval2;
+      }
+      else{
+        fprintf(stderr, "%s: not a command. This should not appear.\n", command);
+        exit(1);
+      }
+
+      if (modify_node(locals, var_op, varValue, !PRINT_REPORT)){
+        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        exit(1);
+      }
+
     }
     else if(command_group == 7){ // DOWN, UP
       //Perimenei GlobalVar
     }
     else if(command_group == 8){ // SLEEP
       //Perimenei VarVal
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, command);
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      fprintf(stderr, "SLEEP: var = %c\n", input_buffer[0]);
+      varval1_op[0] = input_buffer[0];
+
+      varval1 = check_varval(fd, locals, varval1_op, &temp_char);
+      sleep(varval1);
     }
     else if(command_group == 5){ // BRGT, BRGE, BRLT, BRLE, BREQ
       //Perimenei VarVal, VarVal kai Label
