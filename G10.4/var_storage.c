@@ -53,7 +53,7 @@ localVar* add_node(localVar *head, localVar *current, char *new_name, int new_va
     new_node->name = (char*)malloc(sizeof(char) * (strlen(new_name) + 1));
     if (new_node->name == NULL){
       printf("error with malloc in add_node\n");
-  		exit(1);
+  		// exit(1);
       abort_function(head);
     }
     strcpy(new_node->name,new_name);
