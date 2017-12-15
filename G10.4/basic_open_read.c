@@ -330,13 +330,10 @@ int main(int argc,char *argv[]){
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
   char printString[LABEL_SIZE];
 
-  localVar *locals;
-  localVar *globals;
+  localVar *locals, *globals;
 
   locals = init_list();
   globals = init_list();
-
-  add_node(globals, globals->prev, "$first_global", 7);
 
   // pare ta args
   if(argc < 2){
