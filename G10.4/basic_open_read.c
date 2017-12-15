@@ -1,4 +1,5 @@
 #include "var_storage.h"
+#include "labels_commands_list.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -102,7 +103,7 @@ void discard_spaces(int fd, char input_buffer[], int w_nline){
 
   if(w_nline == BLOCK_N_LINE_CHAR){
     if(input_buffer[0] == '\n'){
-      fprintf(stderr, "Unexpected end of line after label. Terminating\n");
+      fprintf(stderr, "Unexpected end of line inside instruction. Terminating\n");
       exit(1);
     }
   }
@@ -321,6 +322,42 @@ int check_varGlobal(int fd, localVar *globals, char input_buffer[], char *temp_c
   }
 }
 
+void search_label_downwards(int fd, char temp_char, char label_to_find[]){
+  int i, bytes_read;
+  char input_buffer[LABEL_SIZE];
+
+  while (1) {
+    if(temp_char == '\n'){
+      if (lseek(fd, -1, SEEK_CUR) == -1){
+        fprintf(stderr, "Error with lseek in search_label_downwards\n");
+        exit(1);
+      }
+    }
+    bytes_read = my_read(fd, input_buffer, __LINE__);
+    if (bytes_read == 0){
+      fprintf(stderr, "Error: label %s not found\n", label_to_find);
+      exit(1);
+    }
+    else if(input_buffer[0] == '\n'){
+      discard_spaces(fd, input_buffer, ALLOW_N_LINE_CHAR);
+      i = read_island(fd, input_buffer);
+      temp_char = input_buffer[i];
+      input_buffer[i] = '\0';
+
+      if (strcmp(label_to_find, input_buffer)){
+        continue; //go to next line
+      }
+      //label_to_find has been found
+      //main will jump to label_to_find and read label from file
+      if (lseek(fd, -strlen(label_to_find)-1, SEEK_CUR) == -1){
+        fprintf(stderr, "Error with lseek in search_label_downwards\n");
+        exit(1);
+      }
+      break;
+    }
+  }
+}
+
 /******************************************************************************/
 
 int main(int argc,char *argv[]){
@@ -329,11 +366,15 @@ int main(int argc,char *argv[]){
   char var_op[LABEL_SIZE], varval1_op[LABEL_SIZE], varval2_op[LABEL_SIZE];
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
   char printString[LABEL_SIZE];
+  off_t temp_offset;
 
-  localVar *locals, *globals;
+  localVar *locals;
+  localVar *globals;
+  labelsT *labels;
 
   locals = init_list();
   globals = init_list();
+  labels = init_labels();
 
   // pare ta args
   if(argc < 2){
@@ -370,6 +411,8 @@ int main(int argc,char *argv[]){
       printf("It's a label!\n");
       strcpy(label, input_buffer); //dynamika??? to label
       labelGiven = 1;
+      add_label(labels, label, lseek(fd, 0, SEEK_CUR) - strlen(label) - 1); //current offset - strlen(label_name)
+
     }else{
       fprintf(stderr, "Syntax error. Neither a label nor a command\n");
       exit(1);
@@ -527,7 +570,7 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      // fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
       var_op[0] = input_buffer[0];
       check_var(fd, locals, var_op, &temp_char);
 
@@ -544,7 +587,7 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      // fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
       varval1_op[0] = input_buffer[0];
 
       varval1 = check_varGlobal(fd, globals, varval1_op, &temp_char);
@@ -575,7 +618,7 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      fprintf(stderr, "STORE: var = %c\n", input_buffer[0]);
       var_op[0] = input_buffer[0];
       check_var(fd, globals, var_op, &temp_char);
 
@@ -673,7 +716,7 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      // fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
       var_op[0] = input_buffer[0];
       check_var(fd, locals, var_op, &temp_char);
 
@@ -745,6 +788,40 @@ int main(int argc,char *argv[]){
     }
     else if(command_group == 7){ // DOWN, UP
       //Perimenei GlobalVar
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, command);
+
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      varval1_op[0] = input_buffer[0];
+      varval1 = check_varGlobal(fd, globals, varval1_op, &temp_char);
+
+      if(strcmp(command, "DOWN") == 0){
+        varval1 = varval1 - 1;
+      }
+      else if(strcmp(command, "UP") == 0){
+        varval1 = varval1 + 1;
+      }
+
+      if (modify_node(globals, varval1_op, varval1, !PRINT_REPORT)){
+        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        exit(1);
+      }
+
+
     }
     else if(command_group == 8){ // SLEEP
       //Perimenei VarVal
@@ -774,31 +851,170 @@ int main(int argc,char *argv[]){
     }
     else if(command_group == 5){ // BRGT, BRGE, BRLT, BRLE, BREQ
       //Perimenei VarVal, VarVal kai Label
+
+      /**************************** VARVAL1 ***********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var/val but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      varval1_op[0] = input_buffer[0];
+      varval1 = check_varval(fd, locals, varval1_op, &temp_char);
+      fprintf(stderr, "varval1 = %d\n", varval1);
+
+      /**************************** VARVAL2 ***********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var/val but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      varval2_op[0] = input_buffer[0];
+      varval2 = check_varval(fd, locals, varval2_op, &temp_char);
+      fprintf(stderr, "varval2 = %d\n", varval2);
+
+      /****************************** LABEL ***********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected label but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+      //bfdhdmdtmytfd
+      i = read_island(fd, input_buffer);
+
+      temp_char = input_buffer[i];
+
+      input_buffer[i] = '\0';
+      if(input_buffer[0] != 'L'){
+        fprintf(stderr, "Syntax error: Not a label.\n");
+        exit(1);
+      }
+
+      /******************** CHECK CONDITION ***********************************/
+      //BRGT, BRGE, BRLT, BRLE, BREQ
+      if(strcmp(command, "BRGT") == 0){
+        varValue = (varval1 > varval2) ? 1 : 0;
+      }
+      else if(strcmp(command, "BRGE") == 0){
+        varValue = (varval1 >= varval2) ? 1 : 0;
+      }
+      else if(strcmp(command, "BRLT") == 0){
+        varValue = (varval1 < varval2) ? 1 : 0;
+      }
+      else if(strcmp(command, "BRLE") == 0){
+        varValue = (varval1 <= varval2) ? 1 : 0;
+      }
+      else if(strcmp(command, "BREQ") == 0){
+        varValue = (varval1 == varval2) ? 1 : 0;
+      }
+      else{
+        fprintf(stderr, "%s: not a command. This should not appear.\n", command);
+        exit(1);
+      }
+      printf("%s: varValue = %d\n", command, varValue);
+
+      /******************** CHECK LABEL ***************************************/
+      if (varValue){
+        temp_offset = search_label(labels, input_buffer, PRINT_REPORT);
+
+        if (temp_offset == INVALID_OFFSET){
+          /******************** IF STATEMENT ************************************/
+          fprintf(stderr, "Label with name %s not in labels list\n", input_buffer);
+          search_label_downwards(fd, temp_char, input_buffer);
+        }
+        else {
+          /*********************** IN THE LOOP **********************************/
+          if (lseek(fd, temp_offset, SEEK_SET) == -1){
+            fprintf(stderr, "BRA: Error with lseek\n");
+            exit(1);
+          }
+        }
+      }
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s %d %d %s "ANSI_COLOR_RESET"\n", command, varval1, varval2, input_buffer);
     }
     else if(command_group == 6){ // BRA
       //Perimenei Label
+
+      /**************************** READ LABEL ********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected label but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      i = read_island(fd, input_buffer);
+
+      temp_char = input_buffer[i];
+
+      input_buffer[i] = '\0';
+      if(input_buffer[0] != 'L'){
+        fprintf(stderr, "Syntax error: Not a label.\n");
+        exit(1);
+      }
+      /******************** CHECK LABEL ***************************************/
+      temp_offset = search_label(labels, input_buffer, PRINT_REPORT);
+
+      if (temp_offset == INVALID_OFFSET){
+        /******************** IF STATEMENT ************************************/
+        fprintf(stderr, "Label with name %s not in labels list\n", input_buffer);
+        search_label_downwards(fd, temp_char, input_buffer);
+
+      }
+      else {
+        /*********************** IN THE LOOP **********************************/
+        if (lseek(fd, temp_offset, SEEK_SET) == -1){
+          fprintf(stderr, "BRA: Error with lseek\n");
+          exit(1);
+        }
+      }
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s %s "ANSI_COLOR_RESET"\n", command, input_buffer);
     }
     else{
       fprintf(stderr, "EDW DEN PROKEITAI POTE NA FTASEI\n");
     }
 
     //edw ftanei (AKA h teleutaia trypa ths flogeras)
-    printf("locals:\n");
+    printf(ANSI_COLOR_RED"locals:\n");
     print_contents(locals);
     printf("globals:\n");
     print_contents(globals);
+    printf("labels:\n");
+    print_labels(labels);
+    printf(ANSI_COLOR_RESET);
   }
-
-  //
-  // if(i >= COMMAND_SIZE || /*check if NOT a command function*/){
-  //   // it's a label
-  //
-  //   // do the same shit once more for the command
-  //   //read
-  //   // check if it's a command. If not: syntax error
-  // }
-  //
-  // //it's a command for sure
 
   //den ftanei edw pote alla tha mpei se mia "terminating function"
 
