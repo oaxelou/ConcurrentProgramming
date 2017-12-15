@@ -1,4 +1,5 @@
 #include "var_storage.h"
+#include "labels_commands_list.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -329,14 +330,15 @@ int main(int argc,char *argv[]){
   char var_op[LABEL_SIZE], varval1_op[LABEL_SIZE], varval2_op[LABEL_SIZE];
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
   char printString[LABEL_SIZE];
+  off_t temp_offset;
 
   localVar *locals;
   localVar *globals;
+  labelsT *labels;
 
   locals = init_list();
   globals = init_list();
-
-  add_node(globals, globals->prev, "$first_global", 7);
+  labels = init_labels();
 
   // pare ta args
   if(argc < 2){
@@ -373,6 +375,8 @@ int main(int argc,char *argv[]){
       printf("It's a label!\n");
       strcpy(label, input_buffer); //dynamika??? to label
       labelGiven = 1;
+      add_label(labels, label, lseek(fd, 0, SEEK_CUR) - strlen(label) - 1); //current offset - strlen(label_name)
+
     }else{
       fprintf(stderr, "Syntax error. Neither a label nor a command\n");
       exit(1);
@@ -530,7 +534,7 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      // fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
       var_op[0] = input_buffer[0];
       check_var(fd, locals, var_op, &temp_char);
 
@@ -547,7 +551,7 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      // fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
       varval1_op[0] = input_buffer[0];
 
       varval1 = check_varGlobal(fd, globals, varval1_op, &temp_char);
@@ -676,7 +680,7 @@ int main(int argc,char *argv[]){
         exit(1);
       }
 
-      fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
+      // fprintf(stderr, "SET: var = %c\n", input_buffer[0]);
       var_op[0] = input_buffer[0];
       check_var(fd, locals, var_op, &temp_char);
 
@@ -811,19 +815,158 @@ int main(int argc,char *argv[]){
     }
     else if(command_group == 5){ // BRGT, BRGE, BRLT, BRLE, BREQ
       //Perimenei VarVal, VarVal kai Label
+
+      /**************************** VARVAL1 ***********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var/val but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      varval1_op[0] = input_buffer[0];
+      varval1 = check_varval(fd, locals, varval1_op, &temp_char);
+      fprintf(stderr, "varval1 = %d\n", varval1);
+
+      /**************************** VARVAL2 ***********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected var/val but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+
+      varval2_op[0] = input_buffer[0];
+      varval2 = check_varval(fd, locals, varval2_op, &temp_char);
+      fprintf(stderr, "varval2 = %d\n", varval2);
+
+      /****************************** LABEL ***********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected label but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+      //bfdhdmdtmytfd
+      i = read_island(fd, input_buffer);
+
+      temp_char = input_buffer[i];
+
+      input_buffer[i] = '\0';
+      if(input_buffer[0] != 'L'){
+        fprintf(stderr, "Syntax error: Not a label.\n");
+        exit(1);
+      }
+
+      /******************** CHECK CONDITION ***********************************/
+      //BRGT, BRGE, BRLT, BRLE, BREQ
+      if(strcmp(command, "BRGT") == 0){
+        varValue = (varval1 > varval2) ? 1 : 0;
+      }
+      else if(strcmp(command, "BRGE") == 0){
+        varValue = (varval1 >= varval2) ? 1 : 0;
+      }
+      else if(strcmp(command, "BRLT") == 0){
+        varValue = (varval1 < varval2) ? 1 : 0;
+      }
+      else if(strcmp(command, "BRLE") == 0){
+        varValue = (varval1 <= varval2) ? 1 : 0;
+      }
+      else if(strcmp(command, "BREQ") == 0){
+        varValue = (varval1 == varval2) ? 1 : 0;
+      }
+      else{
+        fprintf(stderr, "%s: not a command. This should not appear.\n", command);
+        exit(1);
+      }
+      printf("%s: varValue = %d\n", command, varValue);
+
+      /******************** CHECK LABEL ***************************************/
+      if (varValue){
+        temp_offset = search_label(labels, input_buffer, PRINT_REPORT);
+        if (temp_offset == INVALID_OFFSET){
+          fprintf(stderr, "Label with name %s not in labels list\n", input_buffer);
+          exit(1);
+        }
+        if (lseek(fd, temp_offset, SEEK_SET) == -1){
+          fprintf(stderr, "BRA: Error with lseek\n");
+          exit(1);
+        }
+      }
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s %d %d %s "ANSI_COLOR_RESET"\n", command, varval1, varval2, input_buffer);
     }
     else if(command_group == 6){ // BRA
       //Perimenei Label
+
+      /**************************** READ LABEL ********************************/
+      if(temp_char == ' '){
+        discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
+      }
+      else if(temp_char == '\n') {
+        fprintf(stderr, "Syntax error: Expected label but found new line.\n");
+        exit(1);
+      }
+      else{
+        printf("sth terribly wrong\n");
+        exit(1);
+      }
+      //bfdhdmdtmytfd
+      i = read_island(fd, input_buffer);
+
+      temp_char = input_buffer[i];
+
+      input_buffer[i] = '\0';
+      if(input_buffer[0] != 'L'){
+        fprintf(stderr, "Syntax error: Not a label.\n");
+        exit(1);
+      }
+      /******************** CHECK LABEL ***************************************/
+      temp_offset = search_label(labels, input_buffer, PRINT_REPORT);
+      if (temp_offset == INVALID_OFFSET){
+        fprintf(stderr, "Label with name %s not in labels list\n", input_buffer);
+        exit(1);
+      }
+      if (lseek(fd, temp_offset, SEEK_SET) == -1){
+        fprintf(stderr, "BRA: Error with lseek\n");
+        exit(1);
+      }
+
+      if(labelGiven){
+        printf(ANSI_COLOR_BLUE"%s "ANSI_COLOR_RESET, label);
+      }
+      printf(ANSI_COLOR_BLUE"%s %s "ANSI_COLOR_RESET"\n", command, input_buffer);
     }
     else{
       fprintf(stderr, "EDW DEN PROKEITAI POTE NA FTASEI\n");
     }
 
     //edw ftanei (AKA h teleutaia trypa ths flogeras)
-    printf("locals:\n");
+    printf(ANSI_COLOR_RED"locals:\n");
     print_contents(locals);
     printf("globals:\n");
     print_contents(globals);
+    printf("labels:\n");
+    print_labels(labels);
+    printf(ANSI_COLOR_RESET);
   }
 
   //
