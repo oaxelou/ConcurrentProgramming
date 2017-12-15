@@ -103,7 +103,7 @@ void discard_spaces(int fd, char input_buffer[], int w_nline){
 
   if(w_nline == BLOCK_N_LINE_CHAR){
     if(input_buffer[0] == '\n'){
-      fprintf(stderr, "Unexpected end of line after label. Terminating\n");
+      fprintf(stderr, "Unexpected end of line inside instruction. Terminating\n");
       exit(1);
     }
   }
@@ -319,6 +319,42 @@ int check_varGlobal(int fd, localVar *globals, char input_buffer[], char *temp_c
   else{
     fprintf(stderr, "check_var: Syntax error: expected $\n");
     exit(1);
+  }
+}
+
+void search_label_downwards(int fd, char temp_char, char label_to_find[]){
+  int i, bytes_read;
+  char input_buffer[LABEL_SIZE];
+
+  while (1) {
+    if(temp_char == '\n'){
+      if (lseek(fd, -1, SEEK_CUR) == -1){
+        fprintf(stderr, "Error with lseek in search_label_downwards\n");
+        exit(1);
+      }
+    }
+    bytes_read = my_read(fd, input_buffer, __LINE__);
+    if (bytes_read == 0){
+      fprintf(stderr, "Error: label %s not found\n", label_to_find);
+      exit(1);
+    }
+    else if(input_buffer[0] == '\n'){
+      discard_spaces(fd, input_buffer, ALLOW_N_LINE_CHAR);
+      i = read_island(fd, input_buffer);
+      temp_char = input_buffer[i];
+      input_buffer[i] = '\0';
+
+      if (strcmp(label_to_find, input_buffer)){
+        continue; //go to next line
+      }
+      //label_to_find has been found
+      //main will jump to label_to_find and read label from file
+      if (lseek(fd, -strlen(label_to_find)-1, SEEK_CUR) == -1){
+        fprintf(stderr, "Error with lseek in search_label_downwards\n");
+        exit(1);
+      }
+      break;
+    }
   }
 }
 
@@ -899,13 +935,18 @@ int main(int argc,char *argv[]){
       /******************** CHECK LABEL ***************************************/
       if (varValue){
         temp_offset = search_label(labels, input_buffer, PRINT_REPORT);
+
         if (temp_offset == INVALID_OFFSET){
+          /******************** IF STATEMENT ************************************/
           fprintf(stderr, "Label with name %s not in labels list\n", input_buffer);
-          exit(1);
+          search_label_downwards(fd, temp_char, input_buffer);
         }
-        if (lseek(fd, temp_offset, SEEK_SET) == -1){
-          fprintf(stderr, "BRA: Error with lseek\n");
-          exit(1);
+        else {
+          /*********************** IN THE LOOP **********************************/
+          if (lseek(fd, temp_offset, SEEK_SET) == -1){
+            fprintf(stderr, "BRA: Error with lseek\n");
+            exit(1);
+          }
         }
       }
 
@@ -929,7 +970,7 @@ int main(int argc,char *argv[]){
         printf("sth terribly wrong\n");
         exit(1);
       }
-      //bfdhdmdtmytfd
+
       i = read_island(fd, input_buffer);
 
       temp_char = input_buffer[i];
@@ -941,13 +982,19 @@ int main(int argc,char *argv[]){
       }
       /******************** CHECK LABEL ***************************************/
       temp_offset = search_label(labels, input_buffer, PRINT_REPORT);
+
       if (temp_offset == INVALID_OFFSET){
+        /******************** IF STATEMENT ************************************/
         fprintf(stderr, "Label with name %s not in labels list\n", input_buffer);
-        exit(1);
+        search_label_downwards(fd, temp_char, input_buffer);
+
       }
-      if (lseek(fd, temp_offset, SEEK_SET) == -1){
-        fprintf(stderr, "BRA: Error with lseek\n");
-        exit(1);
+      else {
+        /*********************** IN THE LOOP **********************************/
+        if (lseek(fd, temp_offset, SEEK_SET) == -1){
+          fprintf(stderr, "BRA: Error with lseek\n");
+          exit(1);
+        }
       }
 
       if(labelGiven){
@@ -968,17 +1015,6 @@ int main(int argc,char *argv[]){
     print_labels(labels);
     printf(ANSI_COLOR_RESET);
   }
-
-  //
-  // if(i >= COMMAND_SIZE || /*check if NOT a command function*/){
-  //   // it's a label
-  //
-  //   // do the same shit once more for the command
-  //   //read
-  //   // check if it's a command. If not: syntax error
-  // }
-  //
-  // //it's a command for sure
 
   //den ftanei edw pote alla tha mpei se mia "terminating function"
 
