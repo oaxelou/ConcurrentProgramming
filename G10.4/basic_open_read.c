@@ -13,6 +13,8 @@
 
 #define COMMAND_SIZE 7
 #define LABEL_SIZE 100
+#define PROGRAM_TAG "CE326"
+
 
 #define ALLOW_N_LINE_CHAR 0
 #define BLOCK_N_LINE_CHAR 1
@@ -389,6 +391,20 @@ int main(int argc,char *argv[]){
   }
 
   // edw prepei na tsekarei to PROGRAM tag
+  my_read(fd, input_buffer, __LINE__);
+  if (input_buffer[0] != '#'){
+    fprintf(stderr, "Main: Program Tag does not start with '#'\n");
+    exit(1);
+  }
+  discard_spaces(fd, input_buffer, ALLOW_N_LINE_CHAR);
+  i = read_island(fd, input_buffer);
+  temp_char = input_buffer[i];
+  input_buffer[i] = '\0';
+
+  if (strcmp(input_buffer, PROGRAM_TAG)!=0){
+    fprintf(stderr, "Main: Incorrect Program Tag\n");
+    exit(1);
+  }
 
   while(1){
     labelGiven = 0;
