@@ -26,28 +26,28 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
-typedef volatile struct localVariable{
+typedef volatile struct variable{
   char *name;
   int value;
-  volatile struct localVariable *  next;
-  volatile struct localVariable *  prev;
-}localVar;
+  volatile struct variable *  next;
+  volatile struct variable *  prev;
+}varT;
 
-void destroy_list(localVar *head, int print_flag);
-void abort_function(localVar *head);
-localVar* init_list();
-void print_contents(localVar *head);
+void destroy_list(varT *head, int print_flag);
+void abort_function(varT *head);
+varT* init_list();
+void print_contents(varT *head);
 
-localVar* add_node(localVar *head, localVar *current, char *new_name, int new_value);
+varT* add_node(varT *head, varT *current, char *new_name, int new_value);
 
-localVar *find_name(localVar *head, char name[], int lvalue, int print_flag);
-localVar *find_array_name(localVar *head, char name[], int lvalue, int print_flag);
+varT *find_name(varT *head, char name[], int lvalue, int print_flag);
+varT *find_array_name(varT *head, char name[], int lvalue, int print_flag);
 
-localVar *create_array(localVar *head, char array_name[], int new_last_index);
-localVar *realloc_array(localVar *head, localVar *current, char array_name[], int old_last_index, int new_last_index);
+varT *create_array(varT *head, char array_name[], int new_last_index);
+varT *realloc_array(varT *head, varT *current, char array_name[], int old_last_index, int new_last_index);
 
-int modify_node(localVar *head, char name[], int new_value, int print_flag);
-int read_node(localVar *head, char name[], int print_flag);
+int modify_node(varT *head, char name[], int new_value, int print_flag);
+int read_node(varT *head, char name[], int print_flag);
 
 /******************************************************************************/
 

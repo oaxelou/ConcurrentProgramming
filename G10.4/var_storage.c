@@ -1,7 +1,7 @@
 #include "var_storage.h"
 
-void destroy_list(localVar *head, int print_flag){
-  localVar *current = head->next->next;
+void destroy_list(varT *head, int print_flag){
+  varT *current = head->next->next;
   if(print_flag == PRINT_REPORT)
   printf("***** FREE variables ****\n");
   while(current->prev != head){
@@ -9,23 +9,23 @@ void destroy_list(localVar *head, int print_flag){
     if(print_flag == PRINT_REPORT)
     printf("name to free: %s\n", current->prev->name);
     free(current->prev->name);
-    free((struct localVariable *)current->prev);
+    free((struct variable *)current->prev);
 
     current = current->next;
   }
 
-  free((struct localVariable *)head);
+  free((struct variable *)head);
 }
 
-void abort_function(localVar *head){
+void abort_function(varT *head){
   destroy_list(head, PRINT_REPORT);
   exit(1);
 }
 
 //initialises a list
-localVar* init_list(){
-  localVar *head;
-  head = (localVar*)malloc(sizeof(localVar));
+varT* init_list(){
+  varT *head;
+  head = (varT*)malloc(sizeof(varT));
 	if (head == NULL){
 		printf("error with malloc in init_list\n");
 		exit(1);
@@ -39,10 +39,10 @@ localVar* init_list(){
   return (head);
 }
 
-localVar* add_node(localVar *head, localVar *current, char *new_name, int new_value){
-  localVar *new_node;
+varT* add_node(varT *head, varT *current, char *new_name, int new_value){
+  varT *new_node;
 
-  new_node = (localVar*)malloc(sizeof(localVar));
+  new_node = (varT*)malloc(sizeof(varT));
   if (new_node == NULL){
     fprintf(stderr, "error with malloc in add_node\n");
 		// exit(1);
@@ -69,8 +69,8 @@ localVar* add_node(localVar *head, localVar *current, char *new_name, int new_va
 }
 
 //find the instruction with a given name
-localVar *find_name(localVar *head, char name[], int lvalue/*if 1: create it, if 0: require its existence*/, int print_flag){
-	localVar *current;
+varT *find_name(varT *head, char name[], int lvalue/*if 1: create it, if 0: require its existence*/, int print_flag){
+	varT *current;
 
 	for (current = head->next; current->name != NULL; current = current->next){
 		if(strcmp(name, current->name) == 0){
@@ -91,10 +91,10 @@ localVar *find_name(localVar *head, char name[], int lvalue/*if 1: create it, if
   }
 }
 
-localVar *create_array(localVar *head, char array_name[], int new_last_index/*dhladh atoi(name)*/){
+varT *create_array(varT *head, char array_name[], int new_last_index/*dhladh atoi(name)*/){
   int i;
   char name[strlen(array_name) + 2 + NO_DIGIT];
-  localVar* last_array_cell;
+  varT* last_array_cell;
 
   for(i = 0; i <= new_last_index; i++){
     sprintf(name, "%s[%d]", array_name, i);
@@ -103,10 +103,10 @@ localVar *create_array(localVar *head, char array_name[], int new_last_index/*dh
   return last_array_cell;
 }
 
-localVar *realloc_array(localVar *head, localVar *current, char array_name[], int old_last_index, int new_last_index){
+varT *realloc_array(varT *head, varT *current, char array_name[], int old_last_index, int new_last_index){
   int i;
   char name[strlen(array_name) + 2 + NO_DIGIT];
-  localVar* last_array_cell;
+  varT* last_array_cell;
 
   for(i = old_last_index; i <= new_last_index; i++, current = current->next){
     sprintf(name, "%s[%d]", array_name, i);
@@ -115,8 +115,8 @@ localVar *realloc_array(localVar *head, localVar *current, char array_name[], in
   return last_array_cell;
 }
 
-localVar *find_array_name(localVar *head, char name[] /*tou stul "argv[3]" */, int lvalue/*if 1: create it, if 0: require its existence*/, int print_flag){
-  localVar *current;
+varT *find_array_name(varT *head, char name[] /*tou stul "argv[3]" */, int lvalue/*if 1: create it, if 0: require its existence*/, int print_flag){
+  varT *current;
   int array_area = 0;
   char *array_name, *temp;
 
@@ -182,8 +182,8 @@ localVar *find_array_name(localVar *head, char name[] /*tou stul "argv[3]" */, i
   }
 }
 
-void print_contents(localVar *head){
-  localVar *current;
+void print_contents(varT *head){
+  varT *current;
 
   printf("<List>\n");
 
@@ -196,8 +196,8 @@ void print_contents(localVar *head){
 
 // Returns 0: Success
 // Returns 1: Failure
-int modify_node(localVar *head, char name[], int new_value, int print_flag){
-  localVar *current;
+int modify_node(varT *head, char name[], int new_value, int print_flag){
+  varT *current;
 
   if(strchr(name, '[') != NULL){
     current = find_array_name(head, name, CREATE_PERMISSION, print_flag);
@@ -215,8 +215,8 @@ int modify_node(localVar *head, char name[], int new_value, int print_flag){
   return 0;
 }
 
-int read_node(localVar *head, char name[], int print_flag){
-  localVar *current;
+int read_node(varT *head, char name[], int print_flag){
+  varT *current;
 
   if(strchr(name, '[') != NULL){
     current = find_array_name(head, name, !CREATE_PERMISSION, print_flag);
