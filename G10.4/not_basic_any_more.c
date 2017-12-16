@@ -13,6 +13,7 @@
 
 #define COMMAND_SIZE 7
 #define LABEL_SIZE 100
+#define PROGRAM_TAG "PROGRAM"
 
 #define ALLOW_N_LINE_CHAR 0
 #define BLOCK_N_LINE_CHAR 1
@@ -126,7 +127,7 @@ int read_island(int fd, char input_buffer[]){
   return i;
 }
 
-int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char){
+int check_varval(int fd, varT *locals, char input_buffer[], char *temp_char, char command[]){
   int i, j, printVal, printVar = 0;
   char* pos, *pos_temp;
   int ext_array_pos;
@@ -139,7 +140,7 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
     j = 1;
     while(input_buffer[j] != '\0'){
       if(isdigit(input_buffer[j]) == 0){
-        fprintf(stderr, "Syntax error: expected a value\n");
+        fprintf(stderr, "%s: Syntax error: expected a value\n", command);
         exit(1);
       }
       j++;
@@ -159,7 +160,7 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
 
     //check that first char is a letter
     if(isalpha(input_buffer[1]) == 0){
-      fprintf(stderr, "Syntax error. Not right name of variable\n");
+      fprintf(stderr, "%s: Syntax error. Not right name of variable\n", command);
       exit(1);
     }
 
@@ -180,7 +181,7 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
       else{
         pos = pos_temp + 1;
         input_buffer[strlen(input_buffer) - 1] = '\0';
-        printf("if %s = 8\n", pos - 1);
+        // printf("if %s = 8\n", pos - 1);
 
         ext_array_pos = read_node(locals, pos - 1, PRINT_REPORT); // read value; !CREATE_PERMISSION
         pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
@@ -199,12 +200,12 @@ int check_varval(int fd, localVar *locals, char input_buffer[], char *temp_char)
     return printVar;
   }
   else{
-    fprintf(stderr, "Syntax error: Not a varval\n");
+    fprintf(stderr, "%s: Syntax error: Not a varval\n", command);
     exit(1);
   }
 }
 
-void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*, int operation_result*/){
+void check_var(int fd, varT *locals, char input_buffer[], char *temp_char, char command[]){
   int i, ext_array_pos;
   char* pos, *pos_temp;
 
@@ -220,7 +221,7 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
     //check that first char is a letter
     if(isalpha(input_buffer[1]) == 0){
       // printf("===%s\n", input_buffer+1);
-      fprintf(stderr, "check_var: Syntax error. Not right name of variable\n");
+      fprintf(stderr, "%s: Syntax error. Not right name of variable\n", command);
       exit(1);
     }
 
@@ -241,7 +242,7 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
       else{
         pos = pos_temp + 1;
         input_buffer[strlen(input_buffer) - 1] = '\0';
-        printf("if $%s = 8\n", pos);
+        // printf("if $%s = 8\n", pos);
 
         ext_array_pos = read_node(locals, pos - 1, PRINT_REPORT);
         pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
@@ -258,12 +259,12 @@ void check_var(int fd, localVar *locals, char input_buffer[], char *temp_char /*
     // printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
   }
   else{
-    fprintf(stderr, "check_var: Syntax error: expected $\n");
+    fprintf(stderr, "%s: Syntax error: expected $\n", command);
     exit(1);
   }
 }
 
-int check_varGlobal(int fd, localVar *globals, char input_buffer[], char *temp_char /*, int operation_result*/){
+int check_varGlobal(int fd, varT *globals, char input_buffer[], char *temp_char, char command[]){
   int i, ext_array_pos;
   char* pos, *pos_temp;
 
@@ -279,7 +280,7 @@ int check_varGlobal(int fd, localVar *globals, char input_buffer[], char *temp_c
     //check that first char is a letter
     if(isalpha(input_buffer[1]) == 0){
       // printf("===%s\n", input_buffer+1);
-      fprintf(stderr, "check_varGlobal: Syntax error. Not right name of variable\n");
+      fprintf(stderr, "%s: Syntax error. Not right name of variable\n", command);
       exit(1);
     }
 
@@ -300,7 +301,7 @@ int check_varGlobal(int fd, localVar *globals, char input_buffer[], char *temp_c
       else{
         pos = pos_temp + 1;
         input_buffer[strlen(input_buffer) - 1] = '\0';
-        printf("if $%s = 8\n", pos);
+        // printf("if $%s = 8\n", pos);
 
         ext_array_pos = read_node(globals, pos - 1, PRINT_REPORT);
         pos = (char *)malloc(sizeof(char) * NODIGITS(ext_array_pos) + 1);
@@ -317,7 +318,7 @@ int check_varGlobal(int fd, localVar *globals, char input_buffer[], char *temp_c
     // printf(ANSI_COLOR_BLUE"(string)%s (int)%d "ANSI_COLOR_RESET,input_buffer, printVar);
   }
   else{
-    fprintf(stderr, "check_var: Syntax error: expected $\n");
+    fprintf(stderr, "%s: Syntax error: expected $\n", command);
     exit(1);
   }
 }
@@ -361,12 +362,12 @@ void search_label_downwards(int fd, char temp_char, char label_to_find[]){
 //*******************************************************************************************
 
 // KATW APO KATHE KLHSH PREPEI NA UPARXEI H ANTHETHESH input_buffer[0] = temp_char;
-void check_inner_space(int fd, char *temp_char, char error_string[]){
+void check_inner_space(int fd, char *temp_char, char error_string[], char command[]){
   if(*temp_char == ' '){
     discard_spaces(fd, temp_char, BLOCK_N_LINE_CHAR);
   }
   else if(*temp_char == '\n') {
-    fprintf(stderr, "Syntax error: Expected %s but found new line.\n", error_string);
+    fprintf(stderr, "%s: Syntax error: Expected %s but found new line.\n", command, error_string);
     exit(1);
   }
   else{
@@ -375,10 +376,10 @@ void check_inner_space(int fd, char *temp_char, char error_string[]){
   }
 }
 
-void read_label(int fd, char *temp_char, char buffer[]){
+void read_label(int fd, char *temp_char, char buffer[], char command[]){
   int i;
 
-  check_inner_space(fd, temp_char, "label");
+  check_inner_space(fd, temp_char, "label", command);
   buffer[0] = *temp_char;
 
   i = read_island(fd, buffer);
@@ -392,14 +393,14 @@ void read_label(int fd, char *temp_char, char buffer[]){
   }
 }
 
-int read_varval(int fd, localVar *locals,char *temp_char){
+int read_varval(int fd, varT *locals,char *temp_char, char command[]){
   int varval;char buffer[LABEL_SIZE];
 
   if(*temp_char == ' '){
     discard_spaces(fd, buffer, BLOCK_N_LINE_CHAR);
   }
   else if(*temp_char == '\n') {
-    fprintf(stderr, "Syntax error: Expected var/val but found new line.\n");
+    fprintf(stderr, "%s: Syntax error: Expected var/val but found new line.\n", command);
     exit(1);
   }
   else{
@@ -407,23 +408,23 @@ int read_varval(int fd, localVar *locals,char *temp_char){
     exit(1);
   }
 
-  varval = check_varval(fd, locals, buffer, temp_char);
+  varval = check_varval(fd, locals, buffer, temp_char, command);
   return varval;
 }
 
-void read_var(int fd, localVar *locals, char *temp_char, char var_op[]){
+void read_var(int fd, varT *locals, char *temp_char, char var_op[], char command[]){
   char input_buffer[LABEL_SIZE];
 
-  check_inner_space(fd, temp_char, "var");
+  check_inner_space(fd, temp_char, "var", command);
   input_buffer[0] = *temp_char;
 
   var_op[0] = input_buffer[0];
-  check_var(fd, locals, var_op, temp_char);
+  check_var(fd, locals, var_op, temp_char, command);
 }
 
 /******************************************************************************/
 
-void print_command(int fd, localVar *locals, char *temp_char){
+void print_command(int fd, varT *locals, char *temp_char){
   char varval_input[LABEL_SIZE];
   ssize_t bytes_read;
   int varval1;
@@ -432,7 +433,7 @@ void print_command(int fd, localVar *locals, char *temp_char){
     discard_spaces(fd, temp_char, BLOCK_N_LINE_CHAR);
   }
   else if(*temp_char == '\n') {
-    fprintf(stderr, "Syntax error: Expected string but found new line.\n");
+    fprintf(stderr, "PRINT: Syntax error: Expected string but found new line.\n");
     exit(1);
   }
   else{
@@ -441,7 +442,7 @@ void print_command(int fd, localVar *locals, char *temp_char){
   }
 
   if(*temp_char != '"'){
-    fprintf(stderr, "Syntax error: Expected quotes for string.\n");
+    fprintf(stderr, "PRINT: Syntax error: Expected quotes for string.\n");
     exit(1);
   }
 
@@ -458,13 +459,13 @@ void print_command(int fd, localVar *locals, char *temp_char){
   }while(1);
 
   if(*temp_char != '"'){
-    fprintf(stderr, "Syntax error: Expected ending quotes for string.\n");
+    fprintf(stderr, "PRINT: Syntax error: Expected ending quotes for string.\n");
     exit(1);
   }
 
   bytes_read = my_read(fd, temp_char, __LINE__);
   if(bytes_read == 0){
-    fprintf(stderr, "Syntax error: Hasn't reached eoline and nothing to read. Terminating.\n");
+    fprintf(stderr, "PRINT: Syntax error: Hasn't reached eoline and nothing to read. Terminating.\n");
     exit(1);
   }
 
@@ -481,13 +482,13 @@ void print_command(int fd, localVar *locals, char *temp_char){
       exit(1);
     }
 
-    varval1 = check_varval(fd, locals, varval_input, temp_char);
+    varval1 = check_varval(fd, locals, varval_input, temp_char, "PRINT");
     printf(ANSI_COLOR_BLUE"%d "ANSI_COLOR_RESET, varval1);
   }
   printf("\n");
 }
 
-void load_command(int fd, localVar *locals, localVar *globals, char *temp_char){
+void load_command(int fd, varT *locals, varT *globals, char *temp_char){
   char var_op[LABEL_SIZE], input_buffer[LABEL_SIZE];
   int varval1;
 
@@ -496,7 +497,7 @@ void load_command(int fd, localVar *locals, localVar *globals, char *temp_char){
     discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
   }
   else if(*temp_char == '\n') {
-    fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+    fprintf(stderr, "LOAD: Syntax error: Expected var but found new line.\n");
     exit(1);
   }
   else{
@@ -505,23 +506,23 @@ void load_command(int fd, localVar *locals, localVar *globals, char *temp_char){
   }
 
   var_op[0] = input_buffer[0];
-  check_var(fd, locals, var_op, temp_char);
+  check_var(fd, locals, var_op, temp_char, "LOAD");
 
   if(*temp_char == ' '){
     discard_spaces(fd, input_buffer, BLOCK_N_LINE_CHAR);
   }
   else if(*temp_char == '\n') {
-    fprintf(stderr, "Syntax error: Expected var but found new line.\n");
+    fprintf(stderr, "LOAD: Syntax error: Expected var but found new line.\n");
     exit(1);
   }
   else{
     fprintf(stderr, "sth terribly wrong\n");
     exit(1);
   }
-  varval1 = check_varGlobal(fd, globals, input_buffer, temp_char);
+  varval1 = check_varGlobal(fd, globals, input_buffer, temp_char, "LOAD");
 
   if (modify_node(locals, var_op, varval1, !PRINT_REPORT)){
-    fprintf(stderr, "Error with modify_node (should never appear)\n");
+    fprintf(stderr, "LOAD: Error with modify_node (should never appear)\n");
     exit(1);
   }
 }
@@ -589,9 +590,10 @@ int main(int argc,char *argv[]){
   char var_op[LABEL_SIZE], varval1_op[LABEL_SIZE];
   char temp_char, label[LABEL_SIZE] ="", command[COMMAND_SIZE]="";
   off_t temp_offset;
+  int i;
 
-  localVar *locals;
-  localVar *globals;
+  varT *locals;
+  varT *globals;
   labelsT *labels;
 
   locals = init_list();
@@ -610,7 +612,23 @@ int main(int argc,char *argv[]){
 		exit(1);
   }
 
-  // edw prepei na tsekarei to PROGRAM tag
+  /************************* PROGRAM TAG CHECK ********************************/
+  my_read(fd, input_buffer, __LINE__);
+  if (input_buffer[0] != '#'){
+    fprintf(stderr, "Main: Program Tag does not start with '#'\n");
+    exit(1);
+  }
+
+  discard_spaces(fd, input_buffer, ALLOW_N_LINE_CHAR);
+  i = read_island(fd, input_buffer);
+  temp_char = input_buffer[i];
+  input_buffer[i] = '\0';
+
+  if (strcmp(input_buffer, PROGRAM_TAG)!=0){
+    fprintf(stderr, "Main: Incorrect Program Tag\n");
+    exit(1);
+  }
+/******************************************************************************/
 
   while(1){
     labelGiven = read_label_command(fd, &temp_char, labels, label, command, &command_group);
@@ -629,7 +647,7 @@ int main(int argc,char *argv[]){
       }
 
       if(input_buffer[0] != '\n'){
-        fprintf(stderr, "Syntax error: Nothing expected after return\n");
+        fprintf(stderr, "Main: Syntax error: Nothing expected after return\n");
         exit(1);
       }
       break;
@@ -643,31 +661,31 @@ int main(int argc,char *argv[]){
     else if(command_group == 2){ // STORE
       //Perimenei GlobalVar kai Var
 
-      check_inner_space(fd, &temp_char, "var");
+      check_inner_space(fd, &temp_char, "var", command);
       input_buffer[0] = temp_char;
 
       fprintf(stderr, "STORE: var = %c\n", input_buffer[0]);
       var_op[0] = input_buffer[0];
-      check_var(fd, globals, var_op, &temp_char);
+      check_var(fd, globals, var_op, &temp_char, command);
 
       /***************************** VARVAL ***********************************/
-      varval1 = read_varval(fd, locals, &temp_char);
+      varval1 = read_varval(fd, locals, &temp_char, command);
 
       if (modify_node(globals, var_op, varval1, !PRINT_REPORT)){
-        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        fprintf(stderr, "STORE: Error with modify_node (should never appear)\n");
         exit(1);
       }
     }
     else if(command_group == 3){ // SET
       //Perimenei Var kai VarVal
 
-      read_var(fd, locals, &temp_char, var_op);
+      read_var(fd, locals, &temp_char, var_op, command);
 
       /***************************** VARVAL ***********************************/
-      varval1 = read_varval(fd, locals, &temp_char);
+      varval1 = read_varval(fd, locals, &temp_char, command);
 
       if (modify_node(locals, var_op, varval1, !PRINT_REPORT)){
-        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        fprintf(stderr, "SET: Error with modify_node (should never appear)\n");
         exit(1);
       }
     }
@@ -675,17 +693,17 @@ int main(int argc,char *argv[]){
       //Perimenei Var, VarVal kai VarVal
 
       /****************************** VAR *************************************/
-      check_inner_space(fd, &temp_char, "var");
+      check_inner_space(fd, &temp_char, "var", command);
       input_buffer[0] = temp_char;
 
       var_op[0] = input_buffer[0];
-      check_var(fd, locals, var_op, &temp_char);
+      check_var(fd, locals, var_op, &temp_char, command);
 
       /**************************** VARVAL1 ***********************************/
-      varval1 = read_varval(fd, locals, &temp_char);
+      varval1 = read_varval(fd, locals, &temp_char, command);
 
       /**************************** VARVAL2 ***********************************/
-      varval2 = read_varval(fd, locals, &temp_char);
+      varval2 = read_varval(fd, locals, &temp_char, command);
 
       // ADD, SUB, MUL, DIV, MOD
       if(strcmp(command, "ADD") == 0){
@@ -709,7 +727,7 @@ int main(int argc,char *argv[]){
       }
 
       if (modify_node(locals, var_op, varValue, !PRINT_REPORT)){
-        fprintf(stderr, "Error with modify_node (should never appear)\n");
+        fprintf(stderr, "%s: Error with modify_node (should never appear)\n", command);
         exit(1);
       }
 
@@ -728,11 +746,11 @@ int main(int argc,char *argv[]){
       //   exit(1);
       // }
 
-      check_inner_space(fd, &temp_char, "GlobalVar");
+      check_inner_space(fd, &temp_char, "GlobalVar", command);
       input_buffer[0] = temp_char;
 
       varval1_op[0] = input_buffer[0];
-      varval1 = check_varGlobal(fd, globals, varval1_op, &temp_char);
+      varval1 = check_varGlobal(fd, globals, varval1_op, &temp_char, command);
 
       if(strcmp(command, "DOWN") == 0){
         varval1 = varval1 - 1;
@@ -750,24 +768,24 @@ int main(int argc,char *argv[]){
     }
     else if(command_group == 8){ // SLEEP
       //Perimenei VarVal
-      check_inner_space(fd, &temp_char, "var");
+      check_inner_space(fd, &temp_char, "var", command);
       input_buffer[0] = temp_char;
 
       fprintf(stderr, "SLEEP: var = %c\n", input_buffer[0]);
       varval1_op[0] = input_buffer[0];
 
-      varval1 = check_varval(fd, locals, varval1_op, &temp_char);
+      varval1 = check_varval(fd, locals, varval1_op, &temp_char, command);
       sleep(varval1);
     }
     else if(command_group == 5){ // BRGT, BRGE, BRLT, BRLE, BREQ
       //Perimenei VarVal, VarVal kai Label
 
       /**************************** VARVAL1 ***********************************/
-      varval1 = read_varval(fd, locals, &temp_char);
+      varval1 = read_varval(fd, locals, &temp_char, command);
       /**************************** VARVAL2 ***********************************/
-      varval2 = read_varval(fd, locals, &temp_char);
+      varval2 = read_varval(fd, locals, &temp_char, command);
       /****************************** LABEL ***********************************/
-      read_label(fd, &temp_char, input_buffer);
+      read_label(fd, &temp_char, input_buffer, command);
       /******************** CHECK CONDITION ***********************************/
       //BRGT, BRGE, BRLT, BRLE, BREQ
       if(strcmp(command, "BRGT") == 0){
@@ -797,13 +815,13 @@ int main(int argc,char *argv[]){
 
         if (temp_offset == INVALID_OFFSET){
           /******************** IF STATEMENT ************************************/
-          fprintf(stderr, "Label with name %s not in labels list\n", input_buffer);
+          fprintf(stderr, "%s: Label with name %s not in labels list\n", command, input_buffer);
           search_label_downwards(fd, temp_char, input_buffer);
         }
         else {
           /*********************** IN THE LOOP **********************************/
           if (lseek(fd, temp_offset, SEEK_SET) == -1){
-            fprintf(stderr, "BRA: Error with lseek\n");
+            fprintf(stderr, "%s: Error with lseek\n", command);
             exit(1);
           }
         }
@@ -813,13 +831,13 @@ int main(int argc,char *argv[]){
     else if(command_group == 6){ // BRA
       //Perimenei Label
 
-      read_label(fd, &temp_char, input_buffer);
+      read_label(fd, &temp_char, input_buffer, command);
       /******************** CHECK LABEL ***************************************/
       temp_offset = search_label(labels, input_buffer, PRINT_REPORT);
 
       if (temp_offset == INVALID_OFFSET){
         /******************** IF STATEMENT ************************************/
-        fprintf(stderr, "Label with name %s not in labels list\n", input_buffer);
+        fprintf(stderr, "BRA: Label with name %s not in labels list\n", input_buffer);
         search_label_downwards(fd, temp_char, input_buffer);
 
       }
