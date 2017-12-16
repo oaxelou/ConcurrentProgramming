@@ -392,8 +392,8 @@ void read_label(int fd, char *temp_char, char buffer[]){
   }
 }
 
-int read_varval(int fd, localVar *locals,char *temp_char, char buffer[]){
-  int varval;
+int read_varval(int fd, localVar *locals,char *temp_char){
+  int varval;char buffer[LABEL_SIZE];
 
   if(*temp_char == ' '){
     discard_spaces(fd, buffer, BLOCK_N_LINE_CHAR);
@@ -651,7 +651,7 @@ int main(int argc,char *argv[]){
       check_var(fd, globals, var_op, &temp_char);
 
       /***************************** VARVAL ***********************************/
-      varval1 = read_varval(fd, locals, &temp_char, input_buffer);
+      varval1 = read_varval(fd, locals, &temp_char);
 
       if (modify_node(globals, var_op, varval1, !PRINT_REPORT)){
         fprintf(stderr, "Error with modify_node (should never appear)\n");
@@ -664,7 +664,7 @@ int main(int argc,char *argv[]){
       read_var(fd, locals, &temp_char, var_op);
 
       /***************************** VARVAL ***********************************/
-      varval1 = read_varval(fd, locals, &temp_char, input_buffer);
+      varval1 = read_varval(fd, locals, &temp_char);
 
       if (modify_node(locals, var_op, varval1, !PRINT_REPORT)){
         fprintf(stderr, "Error with modify_node (should never appear)\n");
@@ -682,10 +682,10 @@ int main(int argc,char *argv[]){
       check_var(fd, locals, var_op, &temp_char);
 
       /**************************** VARVAL1 ***********************************/
-      varval1 = read_varval(fd, locals, &temp_char, input_buffer);
+      varval1 = read_varval(fd, locals, &temp_char);
 
       /**************************** VARVAL2 ***********************************/
-      varval2 = read_varval(fd, locals, &temp_char, input_buffer);
+      varval2 = read_varval(fd, locals, &temp_char);
 
       // ADD, SUB, MUL, DIV, MOD
       if(strcmp(command, "ADD") == 0){
@@ -763,9 +763,9 @@ int main(int argc,char *argv[]){
       //Perimenei VarVal, VarVal kai Label
 
       /**************************** VARVAL1 ***********************************/
-      varval1 = read_varval(fd, locals, &temp_char, input_buffer);
+      varval1 = read_varval(fd, locals, &temp_char);
       /**************************** VARVAL2 ***********************************/
-      varval2 = read_varval(fd, locals, &temp_char, input_buffer);
+      varval2 = read_varval(fd, locals, &temp_char);
       /****************************** LABEL ***********************************/
       read_label(fd, &temp_char, input_buffer);
       /******************** CHECK CONDITION ***********************************/
