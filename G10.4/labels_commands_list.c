@@ -69,11 +69,11 @@ off_t search_label(labelsT *head, char name[], int print_flag){
 void destroy_labels(labelsT *head, int print_flag){
   labelsT *current = head->next->next;
   if(print_flag == PRINT_REPORT)
-  printf("***************************** FREE labels *****************************\n");
+    printf("***** FREE labels    ****\n");
   while(current->prev != head){
     //free ta pedia tou current
     if(print_flag == PRINT_REPORT)
-    printf("label to free: %s\n", current->prev->name);
+      printf("label to free: %s\n", current->prev->name);
     free(current->prev->name);
     free((struct label_struct *)current->prev);
 

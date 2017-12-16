@@ -3,7 +3,7 @@
 void destroy_list(localVar *head, int print_flag){
   localVar *current = head->next->next;
   if(print_flag == PRINT_REPORT)
-  printf("***************************** FREE *****************************\n");
+  printf("***** FREE variables ****\n");
   while(current->prev != head){
     //free ta pedia tou current
     if(print_flag == PRINT_REPORT)
