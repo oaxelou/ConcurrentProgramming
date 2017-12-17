@@ -19,7 +19,7 @@
 
 typedef volatile struct program_struct{
   char *name;
-  pthread_t pid;
+  pthread_t pid; // se poio core anhkei
   int id;
   int running;
 
