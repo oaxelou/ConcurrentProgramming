@@ -1,5 +1,52 @@
 #include "var_storage.h"
 
+local_varT* init_local_list(){
+  local_varT *head;
+  head = (local_varT*)malloc(sizeof(local_varT));
+	if (head == NULL){
+		printf("error with malloc in init_local_list\n");
+		exit(1);
+	}
+
+  head->name = NULL;
+  head->value = NO_TYPE;
+	head->next = head;
+	head->prev = head;
+
+  return (head);
+}
+
+global_varT* init_global_list(){
+  int mtx_res;
+
+  global_varT *head;
+  head = (global_varT*)malloc(sizeof(global_varT));
+  if (head == NULL){
+    printf("error with malloc in init_global_list\n");
+    exit(1);
+  }
+
+  head->name = NULL;
+  head->value = NO_TYPE;
+  head->next = head;
+  head->prev = head;
+
+ mtx_res = pthread_mutex_init((pthread_mutex_t*)&(head->prv_mtx), NULL);
+ if(mtx_res){
+   printf("(prv_mtx) pthread_mutex_init(%d): %s\n", mtx_res, strerror(mtx_res));
+   exit(1);
+ }
+
+
+ mtx_res = pthread_mutex_init((pthread_mutex_t*)&(head->nxt_mtx), NULL);
+ if(mtx_res){
+   printf("(nxt_mtx) pthread_mutex_init(%d): %s\n", mtx_res, strerror(mtx_res));
+   exit(1);
+ }
+
+  return (head);
+}
+
 void destroy_list(varT *head, int print_flag){
   varT *current = head->next->next;
   if(print_flag == PRINT_REPORT)
@@ -23,21 +70,6 @@ void abort_function(varT *head){
 }
 
 //initialises a list
-varT* init_list(){
-  varT *head;
-  head = (varT*)malloc(sizeof(varT));
-	if (head == NULL){
-		printf("error with malloc in init_list\n");
-		exit(1);
-	}
-
-  head->name = NULL;
-  head->value = NO_TYPE;
-	head->next = head;
-	head->prev = head;
-
-  return (head);
-}
 
 varT* add_node(varT *head, varT *current, char *new_name, int new_value){
   varT *new_node;

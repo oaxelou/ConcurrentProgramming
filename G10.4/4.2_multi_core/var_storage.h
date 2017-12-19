@@ -26,19 +26,31 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
-typedef volatile struct variable{
+typedef volatile struct local_variable{
   char *name;
   int value;
-  volatile struct variable *  next;
-  volatile struct variable *  prev;
-}varT;
+  volatile struct local_variable *  next;
+  volatile struct local_variable *  prev;
+}local_varT;
+
+typedef volatile struct global_variable{
+  char *name;
+  int value;
+  pthread_mutex_t nxt_mtx;
+  volatile struct global_variable *  next;
+  pthread_mutex_t prv_mtx;
+  volatile struct global_variable *  prev;
+}global_varT;
+
+local_varT* init_local_list();
+global_varT* init_global_list();
 
 void destroy_list(varT *head, int print_flag);
-void abort_function(varT *head);
-varT* init_list();
 void print_contents(varT *head);
-
 varT* add_node(varT *head, varT *current, char *new_name, int new_value);
+
+
+void abort_function(varT *head);
 
 varT *find_name(varT *head, char name[], int lvalue, int print_flag);
 varT *find_array_name(varT *head, char name[], int lvalue, int print_flag);
