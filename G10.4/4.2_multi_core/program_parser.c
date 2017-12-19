@@ -628,12 +628,15 @@ int main(/*int id, */int argc,char *argv[]/*, char *filename*/){
   labels = init_labels();
 
 
-  // add_local_node(locals, locals->prev, "$argc", argc + 1);
-  // add_local_node(locals, locals->prev, "$argv[0]", id);
+  add_local_node(locals, locals->prev, "$argc", argc - 1);
+  add_local_node(locals, locals->prev, "$argv[0]", 0);
   // for(i = 0; i < argc; i++){
   //   sprintf(var_op , "$argv[%d]", i + 1);
-  //   add_local_node(locals, locals->prev, var_op, argv[i]);
+  //   add_local_node(locals, locals->prev, var_op,atoi( argv[i]));
   // }
+  sprintf(var_op, "$argv[%d]", 1);
+  add_local_node(locals, locals->prev, var_op,atoi( argv[2]));
+
   print_local_contents(locals);
 
   fd = open(argv[1], O_RDWR, S_IRWXU);
