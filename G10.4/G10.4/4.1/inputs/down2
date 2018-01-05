@@ -1,5 +1,0 @@
-#PROGRAM
-DOWN $sem
-PRINT "Sem should be negative"
-STORE $b 2
-RETURN

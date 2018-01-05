@@ -1,6 +1,0 @@
-#PROGRAM
-STORE $sem 0
-DOWN $sem
-STORE $a 1
-RETURN
-

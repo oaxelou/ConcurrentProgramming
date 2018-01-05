@@ -1,9 +1,0 @@
-#PROGRAM
-
-STORE $a[2] 0
-STORE $a[4] 1
-
-SET $temp 6
-STORE $a[$temp] 12
-
-RETURN 
