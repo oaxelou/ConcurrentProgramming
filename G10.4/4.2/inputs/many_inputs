@@ -1,0 +1,26 @@
+inputs
+
+run inputs/down_init
+run inputs/atermono
+run inputs/atermono
+run inputs/down_init
+run inputs/atermono
+run inputs/atermono
+run inputs/down_init
+run inputs/short
+run inputs/down_init
+run inputs/short
+run inputs/short
+run inputs/short
+run inputs/short
+run inputs/short
+run inputs/short
+run inputs/short
+run inputs/short
+run inputs/t1
+run inputs/t1
+run inputs/t1
+
+
+run inputs/client
+run inputs/server

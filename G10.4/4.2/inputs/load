@@ -1,0 +1,5 @@
+#PROGRAM
+
+STORE $take 2
+LOAD $loc $take
+ RETURN 
