@@ -1,0 +1,5 @@
+#PROGRAM
+  PRINT "hello"
+
+  RETURN
+  
