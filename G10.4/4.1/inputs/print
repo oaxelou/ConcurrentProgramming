@@ -1,0 +1,8 @@
+#PROGRAM
+SET $a 1
+STORE $as 1
+PRINT "hi" $a
+SET $b 2
+SET $c 4
+ADD $a $a 1
+RETURN
