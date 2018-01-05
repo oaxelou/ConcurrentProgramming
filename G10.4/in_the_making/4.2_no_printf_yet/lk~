@@ -1,0 +1,8 @@
+#PROGRAM
+
+SET $a1[2] 4
+SET $h 9
+SET $a[1] 1
+
+RETURN
+

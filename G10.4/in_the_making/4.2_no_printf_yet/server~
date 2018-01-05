@@ -1,0 +1,12 @@
+#PROGRAM
+
+LOAD $m1_local $variable_something
+ADD $m1_local $m1_local 1
+STORE $variable_something $m1_local
+PRINT "Server: Received at $variable_something: " $m1_local
+
+UP $sem
+
+PRINT "Server: Bye"
+
+RETURN

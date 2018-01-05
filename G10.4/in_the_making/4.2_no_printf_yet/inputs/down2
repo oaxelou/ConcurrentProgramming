@@ -1,0 +1,5 @@
+#PROGRAM
+DOWN $sem
+PRINT "Sem should be negative"
+STORE $appear_later 1
+RETURN

@@ -1,0 +1,6 @@
+#PROGRAM
+
+STORE $a[2] 0
+STORE $a[4] 1
+
+RETURN 

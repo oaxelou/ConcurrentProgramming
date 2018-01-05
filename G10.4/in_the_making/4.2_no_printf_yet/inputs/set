@@ -1,0 +1,6 @@
+#PROGRAM
+
+SET $a 10
+STORE $asd 12
+STORE $as2 100
+RETURN

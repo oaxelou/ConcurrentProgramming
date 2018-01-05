@@ -1,0 +1,12 @@
+#PROGRAM
+
+STORE $sem 0
+
+STORE $variable_something 1
+PRINT "Stored at $variable_something: 1. Going to sleep..."
+DOWN $sem
+
+LOAD $local_var_1234 $variable_something
+PRINT "Got back at $variable_something: " $local_var_1234
+
+RETURN

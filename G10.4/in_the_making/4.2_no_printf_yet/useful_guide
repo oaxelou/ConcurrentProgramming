@@ -1,0 +1,35 @@
+run inputs/init.txt 5
+run inputs/consumer.txt 5 2
+run inputs/producer.txt 5 3
+
+1. kill program command
+2. ppt
+3. mtx_program
+
+
+_________________________________________________
+rebalancing stuff
+
+run inputs/down_gen
+run inputs/atermon
+run inputs/atermon
+run inputs/down_gen
+run inputs/atermon
+run inputs/atermon
+run inputs/down_gen
+run inputs/termon
+run inputs/down_gen
+run inputs/termon
+run inputs/termon
+run inputs/termon
+run inputs/termon
+run inputs/termon
+run inputs/termon
+run inputs/termon
+run inputs/termon
+run inputs/t1
+run inputs/t2
+run inputs/t3
+
+run inputs/client
+run inputs/server

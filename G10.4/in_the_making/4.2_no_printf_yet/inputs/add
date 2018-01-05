@@ -1,0 +1,12 @@
+#PROGRAM
+
+SET $a 1
+PRINT "Set $a to " $a
+SET $b 2
+PRINT "Set $b to " $b
+
+ADD $c $a $b
+PRINT "$c = " $c $a $b
+
+RETURN
+ 
